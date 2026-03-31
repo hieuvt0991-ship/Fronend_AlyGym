@@ -5,8 +5,7 @@
 
 import { apiRunner } from './api.js';
 import { formatMoney, parseMoney, setTotalWithMonthCard } from './money.js';
-import { validatePhone, showSuccess, showError, showLoading } from './utils.js';
-import { getStaffName, setButtonLoading } from './init.js';
+import { validatePhone, showSuccess, showError, showLoading, getStaffName, setButtonLoading } from './utils.js';
 
 export function updatePackageOptions() {
   const type = document.getElementById('trainingType')?.value || 'NonPT';

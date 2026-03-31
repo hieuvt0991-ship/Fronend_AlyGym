@@ -3,6 +3,39 @@
  * @description Shared utility functions for the ALY GYM frontend.
  */
 
+// UI Helper Functions
+export function initStaffName() {
+  const el = document.getElementById('staffName');
+  if (!el) return;
+  
+  const stored = localStorage.getItem('aly_staff');
+  if (stored) el.value = stored;
+
+  el.addEventListener('change', () => {
+    localStorage.setItem('aly_staff', el.value.trim());
+  });
+}
+
+export function getStaffName() {
+  return document.getElementById('staffName')?.value.trim() || 'Lễ tân';
+}
+
+export function setButtonLoading(buttonId, isLoading, loadingText = 'Đang xử lý...') {
+  const btn = document.getElementById(buttonId);
+  if (!btn) return;
+  
+  if (isLoading) {
+    btn.disabled = true;
+    btn.dataset.originalText = btn.innerHTML;
+    btn.innerHTML = `<i class="fas fa-spinner fa-spin mr-2"></i>${loadingText}`;
+    btn.classList.add('opacity-75', 'cursor-not-allowed');
+  } else {
+    btn.disabled = false;
+    btn.innerHTML = btn.dataset.originalText || btn.innerHTML;
+    btn.classList.remove('opacity-75', 'cursor-not-allowed');
+  }
+}
+
 export function showLoading(elementId, message = 'Đang xử lý...') {
   const element = document.getElementById(elementId);
   if (element) {
@@ -27,6 +60,7 @@ export function showError(elementId, message) {
   }
 }
 
+// Validation & Formatting
 export function validatePhone(phone) {
   const phoneRegex = /^[0-9]{10,11}$/;
   return phoneRegex.test(String(phone || '').replace(/\D/g, ''));
@@ -69,6 +103,7 @@ export function formatDDMMYYYY(v) {
   return s;
 }
 
+// Tab Management
 export function setActiveTab(tabId) {
   // Hide all sections
   document.querySelectorAll('.tab-content').forEach(tab => {
@@ -89,11 +124,15 @@ export function setActiveTab(tabId) {
     btn.classList.add('bg-gray-200', 'text-gray-800', 'hover:bg-gray-300');
   });
   
-  const activeButton = document.querySelector(`.tabs button[onclick="setActiveTab('${tabId}')"]`);
-  if (activeButton) {
-    activeButton.classList.remove('bg-gray-200', 'text-gray-800', 'hover:bg-gray-300');
-    activeButton.classList.add('bg-blue-700', 'text-white');
-  }
+  // Find button by onclick attribute (handle both simple and complex matches)
+  const buttons = document.querySelectorAll('.tabs button');
+  buttons.forEach(btn => {
+    const onclickStr = btn.getAttribute('onclick') || '';
+    if (onclickStr.includes(`setActiveTab('${tabId}')`)) {
+      btn.classList.remove('bg-gray-200', 'text-gray-800', 'hover:bg-gray-300');
+      btn.classList.add('bg-blue-700', 'text-white');
+    }
+  });
 
   // Trigger tab-specific loads
   if (tabId === 'alert' && typeof window.loadInactiveStudents === 'function') {
@@ -104,5 +143,8 @@ export function setActiveTab(tabId) {
   }
 }
 
-// Attach to window for HTML onclick
+// Global exposure for HTML onclick
 window.setActiveTab = setActiveTab;
+window.getStaffName = getStaffName;
+window.setButtonLoading = setButtonLoading;
+window.initStaffName = initStaffName;

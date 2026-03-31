@@ -4,8 +4,7 @@
  */
 
 import { apiRunner } from './api.js';
-import { showLoading, showError, escapeHtml, formatPhoneNumber } from './utils.js';
-import { getStaffName, setButtonLoading } from './init.js';
+import { showLoading, showError, escapeHtml, formatPhoneNumber, getStaffName, setButtonLoading } from './utils.js';
 
 export function handleManualCheckIn() {
   const input = document.getElementById('manualInput')?.value.trim() || '';
