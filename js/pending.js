@@ -24,15 +24,110 @@ export function searchStudentForPending() {
         renderPendingStudentInfo(student);
         document.getElementById('pendingForm').classList.remove('hidden');
         updatePendingPackageOptions();
+        
+        // Also load existing pending packages for this student
+        refreshPendingList();
       } else {
         showError('pendingStudentInfo', result?.message || 'Không tìm thấy học viên.');
         document.getElementById('pendingForm').classList.add('hidden');
+        document.getElementById('pendingListSection').classList.add('hidden');
       }
     })
     .withFailureHandler(err => {
       showError('pendingStudentInfo', err.message || err);
     })
     .getStudentForPending({ studentId: input });
+}
+
+export function refreshPendingList() {
+  const studentId = document.getElementById('pendingSearchStudentId')?.value.trim();
+  if (!studentId) return;
+
+  const section = document.getElementById('pendingListSection');
+  const content = document.getElementById('pendingListContent');
+  
+  section.classList.remove('hidden');
+  content.innerHTML = '<div class="text-center py-4 text-gray-500 text-xs italic">Đang tải danh sách gói chờ...</div>';
+
+  apiRunner
+    .withSuccessHandler(result => {
+      if (result && result.status === 'success' && result.data && result.data.length > 0) {
+        renderPendingList(result.data);
+      } else {
+        content.innerHTML = '<div class="text-center py-4 text-gray-400 text-xs italic">Học viên chưa có gói chờ nào.</div>';
+      }
+    })
+    .withFailureHandler(err => {
+      content.innerHTML = `<div class="text-center py-4 text-red-500 text-xs italic">Lỗi: ${err.message}</div>`;
+    })
+    .getPendingPackages({ studentId });
+}
+
+function renderPendingList(packages) {
+  const content = document.getElementById('pendingListContent');
+  
+  content.innerHTML = packages.map(pkg => `
+    <div class="bg-white border border-gray-100 rounded-xl p-4 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4 transition-all hover:border-blue-200">
+      <div class="space-y-1">
+        <div class="flex items-center gap-2">
+          <span class="text-xs font-black text-gray-800">${pkg.packageCode}</span>
+          <span class="px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 text-[10px] font-bold uppercase tracking-wider">${pkg.trainingType}</span>
+        </div>
+        <div class="text-[11px] text-gray-500 font-medium">
+          <i class="far fa-calendar-alt mr-1"></i> Dự kiến: <span class="text-gray-800 font-bold">${pkg.activationDate}</span>
+          <span class="mx-2">|</span>
+          <i class="fas fa-money-bill-wave mr-1"></i> Giá: <span class="text-green-600 font-bold">${formatMoney(pkg.price, true)}</span>
+        </div>
+        ${pkg.ptCode ? `<div class="text-[10px] text-purple-600 font-bold"><i class="fas fa-user-tie mr-1"></i> PT: ${pkg.ptCode} ${pkg.ptGroupId ? `(Nhóm: ${pkg.ptGroupId})` : ''}</div>` : ''}
+      </div>
+      <div class="flex gap-2 w-full md:w-auto">
+        <button onclick="activatePendingPackage('${pkg.id}')" class="flex-grow md:flex-none bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-[10px] font-black uppercase shadow-sm transition-all active:scale-95">Kích hoạt</button>
+        <button onclick="cancelPendingPackage('${pkg.id}')" class="flex-grow md:flex-none bg-red-100 hover:bg-red-200 text-red-600 px-4 py-2 rounded-lg text-[10px] font-black uppercase transition-all active:scale-95">Hủy bỏ</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+export function activatePendingPackage(packageId) {
+  if (!confirm('Bạn có chắc chắn muốn kích hoạt gói này ngay bây giờ không?')) return;
+  
+  showLoading('pendingNotification', 'Đang kích hoạt gói chờ...');
+  
+  apiRunner
+    .withSuccessHandler(result => {
+      if (result && result.status === 'success') {
+        showSuccess('pendingNotification', 'Đã kích hoạt gói thành công!');
+        refreshPendingList();
+        // Refresh student cache if exists
+        if (typeof window.refreshStudentCache === 'function') window.refreshStudentCache();
+      } else {
+        showError('pendingNotification', result?.message || 'Không thể kích hoạt gói.');
+      }
+    })
+    .withFailureHandler(err => {
+      showError('pendingNotification', err.message || err);
+    })
+    .activatePendingPackage({ packageId });
+}
+
+export function cancelPendingPackage(packageId) {
+  if (!confirm('Bạn có chắc chắn muốn hủy gói chờ này không? Thao tác này không thể hoàn tác.')) return;
+  
+  showLoading('pendingNotification', 'Đang hủy gói chờ...');
+  
+  apiRunner
+    .withSuccessHandler(result => {
+      if (result && result.status === 'success') {
+        showSuccess('pendingNotification', 'Đã hủy gói chờ thành công.');
+        refreshPendingList();
+      } else {
+        showError('pendingNotification', result?.message || 'Không thể hủy gói.');
+      }
+    })
+    .withFailureHandler(err => {
+      showError('pendingNotification', err.message || err);
+    })
+    .cancelPendingPackage({ packageId });
 }
 
 function renderPendingStudentInfo(student) {
@@ -127,6 +222,9 @@ export function submitPendingForm() {
 
 // Global exposure
 window.searchStudentForPending = searchStudentForPending;
+window.refreshPendingList = refreshPendingList;
+window.activatePendingPackage = activatePendingPackage;
+window.cancelPendingPackage = cancelPendingPackage;
 window.updatePendingPackageOptions = updatePendingPackageOptions;
 window.togglePendingPTFields = togglePendingPTFields;
 window.submitPendingForm = submitPendingForm;

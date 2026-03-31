@@ -170,7 +170,8 @@ export function pasteText(elementId) {
 }
 
 export function generatePTGroupId(tab = 'register') {
-  const packageCode = document.getElementById(tab === 'renew' ? 'renewPackageCode' : 'packageCode')?.value || 'PKG';
+  const packageSelect = document.getElementById(tab === 'renew' ? 'renewPackageCode' : 'packageCode');
+  const packageCode = packageSelect?.value || 'PKG';
   const today = new Date();
   const dd = String(today.getDate()).padStart(2, '0');
   const mm = String(today.getMonth() + 1).padStart(2, '0');

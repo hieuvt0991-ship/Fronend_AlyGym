@@ -5,6 +5,7 @@
 
 import { apiRunner } from './api.js';
 import { showLoading, showError, escapeHtml, formatPhoneNumber, getStaffName, setButtonLoading } from './utils.js';
+import { parseMoney } from './money.js';
 
 export function handleManualCheckIn() {
   const input = document.getElementById('manualInput')?.value.trim() || '';
@@ -22,6 +23,7 @@ export function handleManualInputSearch(inputEl) {
   
   if (query.length < 2) {
     if (suggestionBox) suggestionBox.classList.add('hidden');
+    refreshPtSinglePayEligibility();
     return;
   }
 
@@ -44,7 +46,46 @@ export function handleManualInputSearch(inputEl) {
     } else {
       suggestionBox.classList.add('hidden');
     }
+    refreshPtSinglePayEligibility();
   }, 200);
+}
+
+export function refreshPtSinglePayEligibility() {
+  const trainingType = document.getElementById('checkinTrainingType')?.value || '';
+  const input = (document.getElementById('manualInput')?.value || '').toUpperCase().trim();
+  const box = document.getElementById('ptSingleSessionBox');
+  const chk = document.getElementById('ptPayPerSession');
+  const hint = document.getElementById('ptPayPerSessionHint');
+  
+  if (!box || !chk) return;
+  
+  if (trainingType !== 'PT' || !input.startsWith('APT')) {
+    box.classList.add('hidden');
+    chk.checked = false;
+    return;
+  }
+
+  box.classList.remove('hidden');
+  hint.textContent = 'Đang kiểm tra hiệu lực thẻ tháng...';
+  
+  apiRunner
+    .withSuccessHandler(card => {
+      if (card && card.exists && card.isActive) {
+        const remain = card.remain != null ? card.remain : '';
+        const end = card.endDate || '';
+        hint.textContent = `Thẻ tháng còn hiệu lực${remain !== '' ? ` (${remain} buổi)` : ''}${end ? `, hạn ${end}` : ''}.`;
+        chk.disabled = true;
+        chk.checked = false;
+      } else {
+        hint.textContent = (card && card.exists) ? 'Thẻ tháng không còn hiệu lực. Có thể thanh toán buổi lẻ.' : 'Chưa có thẻ tháng. Có thể thanh toán buổi lẻ.';
+        chk.disabled = false;
+      }
+    })
+    .withFailureHandler(() => {
+      hint.textContent = 'Lỗi kiểm tra thẻ tháng.';
+      chk.disabled = false;
+    })
+    .getMonthCardStatus({ studentId: input });
 }
 
 export function selectStudentSuggestion(id, name) {
@@ -148,7 +189,10 @@ export function submitCheckInCaller(input, source = 'manual') {
     .submitCheckIn({
       studentId: input,
       trainingType,
-      staff: getStaffName()
+      staff: getStaffName(),
+      ptPayPerSession: document.getElementById('ptPayPerSession')?.checked || false,
+      ptSinglePrice: parseMoney(document.getElementById('ptSinglePrice')?.value || '0'),
+      ptSinglePaymentMethod: document.getElementById('ptSinglePaymentMethod')?.value || 'Tiền mặt'
     });
 }
 

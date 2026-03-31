@@ -20,6 +20,7 @@ let __renewMonthCardStatus = null;
  */
 export function searchStudentForRenew() {
   const input = document.getElementById('searchStudentId')?.value.trim();
+  const trainingType = document.getElementById('renewTrainingType')?.value || 'NonPT'; // Get selected type
   const infoBox = document.getElementById('renewStudentInfo');
   const renewForm = document.getElementById('renewForm');
   const notification = document.getElementById('renewNotification');
@@ -36,10 +37,11 @@ export function searchStudentForRenew() {
   apiRunner
     .withSuccessHandler(result => {
       setButtonLoading('renewSearchButton', false);
-      if (result && result.status === 'success') {
-        const student = result.data;
+      if (result && (result.status === 'success' || result.status === 'eligible' || result.status === 'not_eligible')) {
+        const student = result.data || result; // Backend might return data wrapped or direct
+        
         __renewSearchCtx = { 
-          isActive: student.isActive, 
+          isActive: student.remainingSessions > 0, // Fallback if isActive not present
           forcePendingMode: student.hasPending 
         };
         __renewMonthCardStatus = student.monthCard || null;
@@ -48,14 +50,16 @@ export function searchStudentForRenew() {
         renewForm.classList.remove('hidden');
         
         // Auto-fill form based on student data
-        const isPT = student.studentId && student.studentId.startsWith('APT');
+        const studentId = student.studentId || '';
+        const isPT = studentId.startsWith('APT');
         const trainingTypeEl = document.getElementById('renewTrainingType');
         if (trainingTypeEl) {
+          // If search was generic, update training type to match found student
           trainingTypeEl.value = isPT ? (student.trainingType || 'PT1:1') : 'NonPT';
         }
 
         // Initialize form state
-        toggleRenewSwitchPackage(); // Ensure fields are locked/unlocked correctly
+        toggleRenewSwitchPackage(); 
         updateRenewPackageOptions();
         
         // Set default dates
@@ -64,11 +68,13 @@ export function searchStudentForRenew() {
         if (startDateEl) {
           let defaultStart = new Date();
           if (student.endDate) {
-            const [d, m, y] = student.endDate.split('/');
-            const end = new Date(y, m - 1, d);
-            if (end >= today) {
-              defaultStart = new Date(end);
-              defaultStart.setDate(end.getDate() + 1);
+            const parts = student.endDate.split('/');
+            if (parts.length === 3) {
+              const end = new Date(parts[2], parts[1] - 1, parts[0]);
+              if (end >= today) {
+                defaultStart = new Date(end);
+                defaultStart.setDate(end.getDate() + 1);
+              }
             }
           }
           startDateEl.value = defaultStart.toISOString().split('T')[0];
@@ -80,12 +86,19 @@ export function searchStudentForRenew() {
         // Setup payment hint
         recalculateTotal('renew');
         
-        // If has pending, show warning
-        if (student.hasPending) {
+        // If has pending or not eligible, show backend message
+        if (student.status === 'not_eligible' || student.hasPending) {
           const warning = `<div class="bg-orange-100 text-orange-800 p-3 rounded-xl border border-orange-200 mb-3 text-xs font-bold">
-            ⚠️ Học viên đang có gói chờ kích hoạt (${student.pendingPackageCode}). Vui lòng kiểm tra trước khi gia hạn thêm.
+            ⚠️ ${student.message || 'Học viên đã có gói chờ kích hoạt.'}
           </div>`;
           infoBox.insertAdjacentHTML('afterbegin', warning);
+          
+          // Auto switch to pending mode if already has pending or not eligible for renew now
+          const pendingRadio = document.querySelector('input[name="renewMode"][value="pendingLater"]');
+          if (pendingRadio) {
+            pendingRadio.checked = true;
+            toggleRenewMode();
+          }
         }
       } else {
         showError('renewStudentInfo', result?.message || 'Không tìm thấy học viên.');
@@ -97,7 +110,7 @@ export function searchStudentForRenew() {
       showError('renewStudentInfo', err.message || err);
       renewForm.classList.add('hidden');
     })
-    .getStudentForRenew({ studentId: input });
+    .getStudentForRenew({ studentId: input, trainingType: trainingType }); // Pass trainingType to backend
 }
 
 function renderStudentInfo(student) {

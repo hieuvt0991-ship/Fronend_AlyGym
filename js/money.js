@@ -56,7 +56,7 @@ export function setTotalWithMonthCard(pkgPrice, mode = 'register') {
     issueCard = document.getElementById('pendingIssueMonthCard')?.checked;
     updateHint = window.__updatePendingPaymentHint;
   } else {
-    seg = 'chungCu'; // Default for new registration (or add select to UI)
+    seg = document.getElementById('registerMonthCardSegment')?.value || 'chungCu'; // Fix: Read from UI if exists
     el = document.getElementById('totalPrice');
     issueCard = document.getElementById('registerIssueMonthCard')?.checked;
     updateHint = window.__updateRegisterPaymentHint;

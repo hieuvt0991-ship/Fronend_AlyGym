@@ -65,6 +65,43 @@ export function refreshDailyReport() {
     .getDailyRevenueReport();
 }
 
+export function submitRevenueUpdate() {
+  const stt = document.getElementById('revUpdateStt')?.value;
+  if (!stt) {
+    showError('revenueUpdateNotification', 'Vui lòng nhập STT giao dịch');
+    return;
+  }
+
+  showLoading('revenueUpdateNotification', 'Đang cập nhật...');
+  
+  const data = {
+    stt: stt,
+    paymentStatus: document.getElementById('revUpdatePaymentStatus').value,
+    paymentMethod: document.getElementById('revUpdatePaymentMethod').value,
+    cashPaid: parseMoney(document.getElementById('revUpdateCashPaid')?.value || '0'),
+    transferPaid: parseMoney(document.getElementById('revUpdateTransferPaid')?.value || '0'),
+    staff: getStaffName(),
+    notes: document.getElementById('revUpdateNotes')?.value || ''
+  };
+
+  apiRunner
+    .withSuccessHandler(result => {
+      if (result && result.status === 'success') {
+        showSuccess('revenueUpdateNotification', 'Đã cập nhật thanh toán thành công!');
+        document.getElementById('revUpdateStt').value = '';
+        document.getElementById('revUpdateNotes').value = '';
+        refreshDailyReport();
+      } else {
+        showError('revenueUpdateNotification', result?.message || 'Không tìm thấy giao dịch hoặc lỗi cập nhật.');
+      }
+    })
+    .withFailureHandler(err => {
+      showError('revenueUpdateNotification', err.message || err);
+    })
+    .updateRevenuePayment(data);
+}
+
 // Global exposure
 window.submitRevenue = submitRevenue;
+window.submitRevenueUpdate = submitRevenueUpdate;
 window.refreshDailyReport = refreshDailyReport;
