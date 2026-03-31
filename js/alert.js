@@ -4,7 +4,7 @@
  */
 
 import { apiRunner } from './api.js';
-import { showError, escapeHtml, formatPhoneNumber } from './utils.js';
+import { showError, escapeHtml, formatPhoneNumber, showToast } from './utils.js';
 
 export function loadInactiveStudents() {
   const content = document.getElementById('alertContent');
@@ -97,7 +97,7 @@ export function saveContactInfo(studentId) {
   const notes = document.getElementById(`contactNotes_${studentId}`)?.value.trim();
 
   if (!person || !content) {
-    alert('Vui lòng nhập tên người liên hệ và nội dung!');
+    showToast('Vui lòng nhập tên người liên hệ và nội dung!', 'error');
     return;
   }
 
@@ -115,15 +115,15 @@ export function saveContactInfo(studentId) {
         card.style.opacity = '0.5';
         card.classList.add('pointer-events-none');
         document.getElementById(`contactForm_${studentId}`).classList.add('hidden');
-        alert('Đã lưu thông tin liên hệ thành công!');
+        showToast('Đã lưu thông tin liên hệ thành công!', 'success');
       } else {
-        alert('Lỗi: ' + (result?.message || 'Không thể lưu'));
+        showToast('Lỗi: ' + (result?.message || 'Không thể lưu'), 'error');
       }
     })
     .withFailureHandler(err => {
       btn.disabled = false;
       btn.innerHTML = originalText;
-      alert('Lỗi kết nối: ' + err.message);
+      showToast('Lỗi kết nối: ' + err.message, 'error');
     })
     .markStudentAsContacted({
       studentId,

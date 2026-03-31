@@ -51,6 +51,7 @@ export function showSuccess(elementId, message) {
   if (element) {
     element.innerHTML = `<div class="bg-green-100 text-green-800 p-3 rounded border border-green-300">✅ ${message}</div>`;
   }
+  showToast(message, 'success');
 }
 
 export function showError(elementId, message) {
@@ -58,7 +59,35 @@ export function showError(elementId, message) {
   if (element) {
     element.innerHTML = `<div class="bg-red-100 text-red-800 p-3 rounded border border-red-300">❌ ${message}</div>`;
   }
+  showToast(message, 'error');
 }
+
+// Toast System
+export function showToast(message, type = 'info') {
+  const container = document.getElementById('toastContainer');
+  if (!container) return;
+
+  const toast = document.createElement('div');
+  toast.className = `toast toast-${type}`;
+  toast.innerHTML = `
+    <div class="flex items-center gap-2">
+      <i class="fas ${type === 'success' ? 'fa-check-circle' : (type === 'error' ? 'fa-times-circle' : 'fa-info-circle')}"></i>
+      <span>${message}</span>
+    </div>
+  `;
+
+  container.appendChild(toast);
+
+  // Auto remove
+  setTimeout(() => {
+    toast.style.animation = 'fadeOut 0.5s ease-out forwards';
+    setTimeout(() => toast.remove(), 500);
+  }, 4000);
+}
+
+// Global exposure for callAPI
+window.showErrorNotification = (msg) => showToast(msg, 'error');
+window.showSuccessNotification = (msg) => showToast(msg, 'success');
 
 // Validation & Formatting
 export function validatePhone(phone) {
