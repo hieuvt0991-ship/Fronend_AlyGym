@@ -11,195 +11,301 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
   
-  <!-- Custom Styles -->
-  <link rel="stylesheet" href="style.css">
+  <style>
+    body { background-color: #f3f4f6; font-family: 'Inter', system-ui, -apple-system, sans-serif; }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+    .version-footer { text-align: center; font-size: 0.8rem; color: #6b7280; padding: 1rem 0; margin-top: 2rem; border-top: 1px solid #e5e7eb; }
+    input:focus, select:focus, textarea:focus { outline: none; ring: 2px; ring-color: #3b82f6; }
+    .shadow-inner-soft { box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.06); }
+  </style>
 </head>
-<body class="bg-gray-100">
-  <div class="container mx-auto p-4 space-y-2">
+<body class="p-2 md:p-4">
+  <div class="max-w-6xl mx-auto space-y-4">
     <!-- Header -->
-    <header class="flex items-center justify-between py-2 px-4 bg-white border-b gap-4 rounded-t-lg">
-      <h1 class="text-3xl font-bold text-center flex-grow">Hệ thống quản lý học viên ALY GYM CENTER</h1>
-      <div class="flex items-center gap-2">
-        <span class="text-sm text-gray-600 whitespace-nowrap">Lễ tân</span>
-        <input id="staffName" type="text" class="w-40 p-2 border rounded text-sm" placeholder="Tên lễ tân">
+    <header class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col md:flex-row items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <div class="bg-blue-600 text-white p-2 rounded-lg"><i class="fas fa-dumbbell fa-lg"></i></div>
+        <h1 class="text-xl md:text-2xl font-black text-gray-800 tracking-tight">ALY GYM CENTER</h1>
+      </div>
+      <div class="flex items-center gap-2 bg-gray-50 p-1.5 rounded-lg border">
+        <span class="text-xs font-bold text-gray-500 px-2">LỄ TÂN</span>
+        <input id="staffName" type="text" class="bg-white border rounded px-3 py-1.5 text-sm font-semibold w-40 outline-none focus:border-blue-500" placeholder="Nhập tên...">
       </div>
     </header>
 
     <!-- Navigation Tabs -->
-    <nav class="tabs flex justify-center mb-4 space-x-2 bg-white p-2 border-x">
-      <button onclick="setActiveTab('checkIn')" class="px-6 py-2 bg-blue-700 text-white rounded">Điểm danh</button>
-      <button onclick="setActiveTab('register')" class="px-6 py-2 bg-gray-200 text-gray-800 hover:bg-gray-300 rounded">Đăng ký</button>
-      <button onclick="setActiveTab('renew')" class="px-6 py-2 bg-gray-200 text-gray-800 hover:bg-gray-300 rounded">Gia hạn / Tra cứu</button>
-      <button onclick="setActiveTab('revenue')" class="px-6 py-2 bg-green-600 text-white hover:bg-green-700 rounded">💰 Bán hàng</button>
-      <button onclick="setActiveTab('alert')" class="px-6 py-2 bg-orange-500 text-white hover:bg-orange-600 rounded">⚠️ Cảnh báo</button>
+    <nav class="tabs flex flex-wrap justify-center gap-2 bg-white p-2 rounded-xl shadow-sm border border-gray-100">
+      <button onclick="setActiveTab('checkIn')" class="px-4 py-2.5 rounded-lg font-bold text-sm transition-all bg-blue-700 text-white shadow-md">
+        <i class="fas fa-user-check mr-2"></i>Điểm danh
+      </button>
+      <button onclick="setActiveTab('register')" class="px-4 py-2.5 rounded-lg font-bold text-sm transition-all bg-gray-200 text-gray-800 hover:bg-gray-300">
+        <i class="fas fa-user-plus mr-2"></i>Đăng ký mới
+      </button>
+      <button onclick="setActiveTab('renew')" class="px-4 py-2.5 rounded-lg font-bold text-sm transition-all bg-gray-200 text-gray-800 hover:bg-gray-300">
+        <i class="fas fa-history mr-2"></i>Gia hạn / Tra cứu
+      </button>
+      <button onclick="setActiveTab('revenue')" class="px-4 py-2.5 rounded-lg font-bold text-sm transition-all bg-green-600 text-white hover:bg-green-700">
+        <i class="fas fa-cash-register mr-2"></i>Bán hàng
+      </button>
+      <button onclick="setActiveTab('alert')" class="px-4 py-2.5 rounded-lg font-bold text-sm transition-all bg-orange-500 text-white hover:bg-orange-600">
+        <i class="fas fa-exclamation-triangle mr-2"></i>Cảnh báo
+      </button>
     </nav>
 
-    <!-- Main Content Area -->
+    <!-- Main Content -->
     <main id="mainContent">
-      <!-- Check-in Tab -->
-      <section id="checkInTab" class="tab-content bg-white rounded-lg shadow-lg p-4 space-y-4">
-        <h2 class="text-xl font-bold">📋 Điểm danh học viên</h2>
-        <div class="bg-blue-50 border border-blue-200 p-4 rounded-lg shadow flex flex-col items-center space-y-3">
-          <h3 class="text-lg font-semibold text-blue-900 flex items-center gap-2">🔁 Điểm danh tự động</h3>
-          <div id="reader" class="w-full max-w-md mx-auto" style="height: auto;"></div>
-          <div id="result" class="text-gray-700">📷 Chưa quét mã</div>
-          <div class="flex space-x-4">
-            <button onclick="startQRScan()" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg flex items-center gap-2"><span>📷</span> Quét QR</button>
-            <button onclick="stopQRScan()" class="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-lg flex items-center gap-2"><span>⛔</span> Dừng quét</button>
-          </div>
-        </div>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div class="bg-red-50 border border-red-200 p-4 rounded-lg shadow relative">
-            <h3 class="text-md font-semibold text-red-700 mb-2">📝 Nhập thủ công:</h3>
-            <div class="space-y-3">
-              <div class="relative">
-                <input type="text" id="manualInput" class="w-full p-2 border rounded-lg" placeholder="Mã HV, SĐT, hoặc tên" oninput="handleManualInputSearch(this)">
-                <div id="manualInputSuggestions" class="absolute z-50 left-0 right-0 bg-white border border-gray-300 rounded-lg shadow-xl mt-1 hidden max-h-60 overflow-y-auto"></div>
-              </div>
-              <select id="checkinTrainingType" class="w-full border p-2 rounded-lg">
-                <option value="">-- Chọn hình thức tập --</option>
+      <!-- 1. CHECK-IN TAB -->
+      <section id="checkInTab" class="tab-content active bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
+        <div class="p-6 space-y-6">
+          <div class="flex items-center justify-between border-b pb-4">
+            <h2 class="text-xl font-black text-gray-800">📋 ĐIỂM DANH HỌC VIÊN</h2>
+            <div class="flex gap-2">
+              <select id="checkinTrainingType" class="border rounded-lg px-3 py-1.5 text-sm font-bold bg-gray-50 outline-none focus:border-blue-500">
                 <option value="NonPT">Tự tập (NonPT)</option>
-                <option value="PT">Tập có HLV (PT)</option>
-                <option value="OutOfHours">Tự tập ngoài giờ (Thẻ tháng)</option>
+                <option value="PT">Có HLV (PT)</option>
+                <option value="OutOfHours">Ngoài giờ</option>
               </select>
-              <button onclick="handleManualCheckIn()" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg font-bold">✅ Check-in</button>
             </div>
           </div>
-          <div class="md:col-span-2 bg-green-50 border border-green-200 p-4 rounded-lg shadow">
-            <h3 class="text-md font-semibold text-green-800 mb-2">📊 Kết quả:</h3>
-            <div id="checkInNotification" class="text-base text-gray-800 space-y-2"></div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- QR Scanner Left -->
+            <div class="bg-blue-50 rounded-2xl p-6 border border-blue-100 flex flex-col items-center space-y-4">
+              <div class="w-full max-w-sm bg-black rounded-xl overflow-hidden shadow-2xl relative">
+                <div id="reader" style="width: 100%; min-height: 250px;"></div>
+                <div id="result" class="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-[10px] p-1 text-center italic">Chưa quét mã</div>
+              </div>
+              <div class="flex gap-3 w-full">
+                <button onclick="startQRScan()" class="flex-grow bg-blue-600 text-white py-3 rounded-xl font-black hover:bg-blue-700 shadow-lg transition-transform active:scale-95">
+                  <i class="fas fa-camera mr-2"></i>MỞ CAMERA
+                </button>
+                <button onclick="stopQRScan()" class="bg-red-500 text-white px-6 py-3 rounded-xl font-black hover:bg-red-600 transition-colors">
+                  <i class="fas fa-stop"></i>
+                </button>
+              </div>
+            </div>
+
+            <!-- Manual Input Right -->
+            <div class="space-y-4">
+              <div class="bg-gray-50 rounded-2xl p-6 border border-gray-200 relative">
+                <label class="block text-xs font-black text-gray-500 mb-2 uppercase tracking-widest">Nhập thủ công</label>
+                <div class="relative">
+                  <input type="text" id="manualInput" oninput="handleManualInputSearch(this)" class="w-full p-4 border-2 border-gray-200 rounded-xl text-lg font-bold focus:border-blue-500 transition-colors outline-none shadow-sm" placeholder="Mã HV / SĐT / Tên">
+                  <div id="manualInputSuggestions" class="absolute z-50 left-0 right-0 bg-white border border-gray-200 rounded-xl shadow-2xl mt-2 hidden max-h-64 overflow-y-auto"></div>
+                </div>
+                <button id="checkInButton" onclick="handleManualCheckIn()" class="w-full mt-4 bg-gray-800 text-white py-4 rounded-xl font-black text-lg hover:bg-black shadow-lg transition-all active:scale-95">
+                  XÁC NHẬN ĐIỂM DANH
+                </button>
+              </div>
+              
+              <!-- Result Area -->
+              <div id="checkInNotification" class="min-h-[100px] flex items-center justify-center border-2 border-dashed border-gray-200 rounded-2xl text-gray-400 italic text-sm p-4">
+                Kết quả điểm danh sẽ hiển thị tại đây...
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
-      <!-- Register Tab -->
-      <section id="registerTab" class="tab-content bg-white p-6 rounded-lg shadow-lg">
-        <h2 class="text-xl font-bold mb-6">Đăng ký học viên mới</h2>
-        <form id="registerForm" class="grid grid-cols-1 md:grid-cols-3 gap-6" onsubmit="return false;">
-          <!-- personal info -->
-          <div class="bg-blue-50 p-4 rounded-lg border border-blue-100">
-            <h3 class="font-semibold text-blue-800 mb-3 border-b border-blue-200 pb-1">1. Thông tin học viên</h3>
-            <div class="space-y-3">
-              <input id="fullName" type="text" class="w-full p-2 border rounded text-sm" placeholder="Họ tên HV*" required>
-              <div class="grid grid-cols-2 gap-2">
-                <input id="dob" type="date" class="w-full p-2 border rounded text-sm" required>
-                <input id="phone" type="text" class="w-full p-2 border rounded text-sm" placeholder="SĐT*" required>
+      <!-- 2. REGISTER TAB -->
+      <section id="registerTab" class="tab-content bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
+        <div class="p-6 space-y-6">
+          <h2 class="text-xl font-black text-gray-800 border-b pb-4">📝 ĐĂNG KÝ HỌC VIÊN MỚI</h2>
+          <form id="registerForm" class="grid grid-cols-1 md:grid-cols-3 gap-6" onsubmit="return false;">
+            <!-- Student Info -->
+            <div class="space-y-4 bg-gray-50 p-5 rounded-2xl border">
+              <h3 class="font-black text-xs text-blue-600 uppercase tracking-widest mb-4">1. Thông tin cá nhân</h3>
+              <input id="fullName" type="text" class="w-full p-3 border rounded-xl text-sm font-bold" placeholder="Họ tên học viên *">
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-[10px] font-bold text-gray-400 mb-1">NGÀY SINH</label>
+                  <input id="dob" type="date" class="w-full p-2.5 border rounded-xl text-sm font-bold">
+                </div>
+                <div>
+                  <label class="block text-[10px] font-bold text-gray-400 mb-1">SỐ ĐIỆN THOẠI</label>
+                  <input id="phone" type="text" class="w-full p-2.5 border rounded-xl text-sm font-bold" placeholder="09xxx...">
+                </div>
               </div>
-              <input id="address" type="text" class="w-full p-2 border rounded text-sm" placeholder="Địa chỉ">
-              <input id="referrer" type="text" class="w-full p-2 border rounded text-sm" placeholder="Người giới thiệu">
+              <input id="address" type="text" class="w-full p-3 border rounded-xl text-sm font-bold" placeholder="Địa chỉ">
+              <input id="referrer" type="text" class="w-full p-3 border rounded-xl text-sm font-bold" placeholder="Người giới thiệu">
             </div>
-          </div>
-          <!-- package info -->
-          <div class="bg-purple-50 p-4 rounded-lg border border-purple-100">
-            <h3 class="font-semibold text-purple-800 mb-3 border-b border-purple-200 pb-1">2. Cấu hình gói</h3>
-            <div class="space-y-3">
-              <select id="trainingType" onchange="togglePTFields()" class="w-full p-2 border rounded text-sm bg-white">
+
+            <!-- Package Config -->
+            <div class="space-y-4 bg-gray-50 p-5 rounded-2xl border">
+              <h3 class="font-black text-xs text-purple-600 uppercase tracking-widest mb-4">2. Gói tập & HLV</h3>
+              <select id="trainingType" onchange="togglePTFields()" class="w-full p-3 border rounded-xl text-sm font-bold bg-white">
                 <option value="NonPT">Tự tập (NonPT)</option>
                 <option value="PT1:1">HLV 1:1 (PT1:1)</option>
                 <option value="PT2:1">HLV 2:1 (PT2:1)</option>
                 <option value="PT3:1">HLV 3:1 (PT3:1)</option>
               </select>
-              <select id="packageCode" onchange="updateTotalPrice()" class="w-full p-2 border rounded text-sm bg-white" required></select>
-              <input id="startDate" type="date" class="w-full p-2 border rounded text-sm" required>
-              <div id="ptRow" class="hidden space-y-2 border-t pt-2">
-                <select id="ptCode" class="w-full p-2 border rounded text-sm bg-white"></select>
-                <div id="ptGroupField" class="hidden flex gap-1">
-                  <input id="ptGroupId" type="text" class="flex-grow p-2 border rounded text-xs" placeholder="Mã nhóm">
-                  <button type="button" onclick="generatePTGroupIdRegister()" class="bg-purple-600 text-white px-2 py-1 rounded text-xs">Tạo</button>
+              <select id="packageCode" onchange="updateTotalPrice()" class="w-full p-3 border rounded-xl text-sm font-bold bg-white"></select>
+              <div>
+                <label class="block text-[10px] font-bold text-gray-400 mb-1">NGÀY BẮT ĐẦU</label>
+                <input id="startDate" type="date" class="w-full p-3 border rounded-xl text-sm font-bold">
+              </div>
+              <div id="ptRow" class="hidden space-y-3 pt-3 border-t border-dashed">
+                <select id="ptCode" class="w-full p-3 border rounded-xl text-sm font-bold bg-white"></select>
+                <input id="ptGroupId" type="text" class="w-full p-3 border rounded-xl text-xs font-bold" placeholder="Mã nhóm (nếu có)">
+              </div>
+            </div>
+
+            <!-- Payment -->
+            <div class="space-y-4 bg-green-50 p-5 rounded-2xl border border-green-100 flex flex-col">
+              <h3 class="font-black text-xs text-green-600 uppercase tracking-widest mb-4">3. Thanh toán</h3>
+              <div class="space-y-3 flex-grow">
+                <select id="paymentStatus" class="w-full p-3 border rounded-xl text-sm font-bold bg-white">
+                  <option value="Đã thanh toán">Đã thanh toán</option>
+                  <option value="Thanh toán một phần">Thanh toán một phần</option>
+                  <option value="Chưa thanh toán">Chưa thanh toán</option>
+                </select>
+                <select id="paymentMethod" class="w-full p-3 border rounded-xl text-sm font-bold bg-white">
+                  <option value="Tiền mặt">Tiền mặt</option>
+                  <option value="Chuyển khoản">Chuyển khoản</option>
+                  <option value="Tiền mặt + Chuyển khoản">Cả hai</option>
+                </select>
+                <div class="bg-white p-4 rounded-xl border-2 border-green-500 shadow-inner-soft">
+                  <label class="block text-[10px] font-black text-green-600 mb-1">TỔNG TIỀN</label>
+                  <input id="totalPrice" type="text" class="w-full bg-transparent border-none text-2xl font-black text-green-700 text-right outline-none" readonly value="0 VNĐ">
                 </div>
               </div>
+              <button id="registerButton" onclick="submitRegistrationForm()" class="w-full py-4 bg-green-600 text-white rounded-xl font-black text-lg hover:bg-green-700 shadow-xl transition-all active:scale-95 mt-4">
+                HOÀN TẤT ĐĂNG KÝ
+              </button>
             </div>
-          </div>
-          <!-- payment info -->
-          <div class="bg-green-50 p-4 rounded-lg border border-green-100 flex flex-col">
-            <h3 class="font-semibold text-green-800 mb-3 border-b border-green-200 pb-1">3. Thanh toán</h3>
-            <div class="space-y-3 flex-grow">
-              <select id="paymentStatus" class="w-full p-2 border rounded text-sm bg-white">
-                <option value="Đã thanh toán">Đã thanh toán</option>
-                <option value="Thanh toán một phần">Thanh toán một phần</option>
-                <option value="Chưa thanh toán">Chưa thanh toán</option>
-              </select>
-              <select id="paymentMethod" class="w-full p-2 border rounded text-sm bg-white">
-                <option value="Tiền mặt">Tiền mặt</option>
-                <option value="Chuyển khoản">Chuyển khoản</option>
-                <option value="Tiền mặt + Chuyển khoản">Tiền mặt + Chuyển khoản</option>
-              </select>
-              <div class="bg-white p-2 rounded border">
-                <input id="totalPrice" type="text" class="w-full p-2 border-none text-lg font-bold text-green-700 text-right" readonly value="0 VNĐ">
-              </div>
-              <button type="button" onclick="submitRegistrationForm()" class="w-full py-3 bg-green-600 text-white rounded-lg font-bold shadow-md">✅ ĐĂNG KÝ</button>
-            </div>
-          </div>
-        </form>
-        <div id="registerNotification" class="mt-4"></div>
-      </section>
-
-      <!-- Renew Tab -->
-      <section id="renewTab" class="tab-content bg-white p-6 rounded-lg shadow-lg">
-        <h2 class="text-xl font-bold mb-4">Gia hạn gói tập</h2>
-        <div class="bg-gray-50 p-4 rounded-lg border mb-4 flex gap-4 items-end">
-          <div class="flex-grow">
-            <input id="searchStudentId" type="text" class="w-full p-2 border rounded text-sm" placeholder="Mã HV, tên hoặc SĐT">
-          </div>
-          <button onclick="searchStudentForRenew()" class="px-6 py-2 bg-blue-600 text-white rounded font-medium">🔍 Tìm kiếm</button>
-        </div>
-        <div id="renewStudentInfo" class="mb-4"></div>
-        <form id="renewForm" class="hidden grid grid-cols-1 md:grid-cols-3 gap-6">
-          <!-- Renew form fields (simplified for now) -->
-          <div class="p-4 bg-gray-50 rounded border">
-            <h3 class="font-bold mb-2">Cấu hình gói</h3>
-            <select id="renewPackageCode" class="w-full p-2 border rounded" onchange="updateRenewPackageOptions()"></select>
-            <input type="date" id="renewStartDate" class="w-full p-2 mt-2 border rounded">
-          </div>
-          <div class="p-4 bg-gray-50 rounded border">
-            <h3 class="font-bold mb-2">Thanh toán</h3>
-            <input id="renewTotalPrice" type="text" readonly class="w-full p-2 border rounded bg-white font-bold text-green-700" value="0 VNĐ">
-            <button type="button" onclick="confirmAndRenew()" class="w-full mt-2 py-3 bg-green-600 text-white rounded-lg font-bold">✅ XÁC NHẬN GIA HẠN</button>
-          </div>
-        </form>
-        <div id="renewNotification" class="mt-4"></div>
-      </section>
-      
-      <!-- Revenue Tab -->
-      <section id="revenueTab" class="tab-content bg-white p-6 rounded-lg shadow-lg">
-        <h2 class="text-xl font-bold mb-6 text-green-700">💰 Quản lý Doanh thu</h2>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <form id="revenueForm" class="bg-gray-50 p-6 rounded-lg border space-y-4">
-            <select id="revType" class="w-full p-2 border rounded-lg">
-              <option value="Bán nước">Bán nước</option>
-              <option value="Phí phòng">Phí phòng</option>
-              <option value="Buổi lẻ">Buổi lẻ</option>
-              <option value="Khác">Khác</option>
-            </select>
-            <input type="text" id="revDescription" class="w-full p-2 border rounded-lg" placeholder="Mô tả / Sản phẩm">
-            <div class="grid grid-cols-2 gap-4">
-              <input type="number" id="revQuantity" value="1" min="1" class="w-full p-2 border rounded-lg">
-              <input type="text" id="revPrice" class="w-full p-2 border rounded-lg" oninput="handleMoneyInput(this)" placeholder="Đơn giá (VNĐ)">
-            </div>
-            <button type="button" onclick="submitRevenue()" class="w-full bg-green-600 text-white py-3 rounded-lg font-bold">✅ Lưu doanh thu</button>
-            <div id="revenueNotification"></div>
           </form>
-          <div class="bg-blue-50 p-6 rounded-lg border">
-            <h3 class="font-bold mb-4">📊 Doanh thu hôm nay</h3>
-            <div id="dailyReportContent" class="space-y-2">Đang tải...</div>
-            <button onclick="refreshDailyReport()" class="mt-4 text-blue-600 text-sm">🔄 Làm mới</button>
+          <div id="registerNotification" class="mt-4"></div>
+        </div>
+      </section>
+
+      <!-- 3. RENEW TAB -->
+      <section id="renewTab" class="tab-content bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
+        <div class="p-6 space-y-6">
+          <h2 class="text-xl font-black text-gray-800 border-b pb-4">🔄 GIA HẠN GÓI TẬP</h2>
+          
+          <div class="bg-gray-50 p-6 rounded-2xl border flex flex-col md:flex-row gap-4 items-end">
+            <div class="flex-grow space-y-2">
+              <label class="block text-xs font-black text-gray-400 uppercase tracking-widest">Tìm kiếm học viên</label>
+              <input id="searchStudentId" type="text" class="w-full p-4 border rounded-xl text-lg font-bold shadow-sm outline-none focus:border-blue-500" placeholder="Mã HV / SĐT / Tên">
+            </div>
+            <button onclick="searchStudentForRenew()" class="bg-blue-600 text-white px-8 py-4 rounded-xl font-black hover:bg-blue-700 shadow-lg transition-all active:scale-95 h-[60px]">
+              TÌM KIẾM
+            </button>
+          </div>
+
+          <div id="renewStudentInfo"></div>
+
+          <form id="renewForm" class="hidden grid grid-cols-1 md:grid-cols-2 gap-8 pt-6 border-t border-dashed" onsubmit="return false;">
+            <div class="space-y-4">
+              <h3 class="font-black text-xs text-purple-600 uppercase tracking-widest">Cấu hình gia hạn</h3>
+              <div>
+                <label class="block text-[10px] font-bold text-gray-400 mb-1">CHỌN GÓI MỚI</label>
+                <select id="renewPackageCode" onchange="updateRenewPackageOptions()" class="w-full p-4 border rounded-xl text-sm font-bold bg-white"></select>
+              </div>
+              <div>
+                <label class="block text-[10px] font-bold text-gray-400 mb-1">NGÀY BẮT ĐẦU GIA HẠN</label>
+                <input id="renewStartDate" type="date" class="w-full p-4 border rounded-xl text-sm font-bold">
+              </div>
+            </div>
+
+            <div class="bg-green-50 p-6 rounded-2xl border border-green-100 space-y-4 flex flex-col justify-between">
+              <div class="bg-white p-5 rounded-xl border-2 border-green-500 shadow-inner-soft">
+                <label class="block text-[10px] font-black text-green-600 mb-1">TỔNG TIỀN GIA HẠN</label>
+                <input id="renewTotalPrice" type="text" class="w-full bg-transparent border-none text-3xl font-black text-green-700 text-right outline-none" readonly value="0 VNĐ">
+              </div>
+              <button id="submitBtn" onclick="confirmAndRenew()" class="w-full py-5 bg-green-600 text-white rounded-xl font-black text-xl hover:bg-green-700 shadow-xl transition-all active:scale-95">
+                XÁC NHẬN GIA HẠN
+              </button>
+            </div>
+          </form>
+          <div id="renewNotification" class="mt-4"></div>
+        </div>
+      </section>
+
+      <!-- 4. REVENUE TAB -->
+      <section id="revenueTab" class="tab-content bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
+        <div class="p-6 space-y-6">
+          <h2 class="text-xl font-black text-green-700 border-b pb-4">💰 QUẢN LÝ BÁN HÀNG & DỊCH VỤ</h2>
+          
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <!-- Left: Sales Form -->
+            <div class="bg-gray-50 p-6 rounded-2xl border space-y-4">
+              <h3 class="font-black text-xs text-gray-400 uppercase tracking-widest mb-4">Ghi nhận dịch vụ</h3>
+              <div class="grid grid-cols-2 gap-4">
+                <div class="col-span-2">
+                  <label class="block text-[10px] font-bold text-gray-400 mb-1">LOẠI DỊCH VỤ</label>
+                  <select id="revType" class="w-full p-3 border rounded-xl text-sm font-bold bg-white">
+                    <option value="Bán nước">Bán nước</option>
+                    <option value="Phí phòng">Phí phòng</option>
+                    <option value="Buổi lẻ">Buổi lẻ</option>
+                    <option value="Khác">Khác</option>
+                  </select>
+                </div>
+                <div class="col-span-2">
+                  <label class="block text-[10px] font-bold text-gray-400 mb-1">MÔ TẢ / SẢN PHẨM</label>
+                  <input type="text" id="revDescription" class="w-full p-3 border rounded-xl text-sm font-bold" placeholder="Ví dụ: Nước suối Lavie...">
+                </div>
+                <div>
+                  <label class="block text-[10px] font-bold text-gray-400 mb-1">SỐ LƯỢNG</label>
+                  <input type="number" id="revQuantity" value="1" min="1" class="w-full p-3 border rounded-xl text-sm font-bold text-center">
+                </div>
+                <div>
+                  <label class="block text-[10px] font-bold text-gray-400 mb-1">ĐƠN GIÁ (VNĐ)</label>
+                  <input type="text" id="revPrice" oninput="handleMoneyInput(this)" class="w-full p-3 border rounded-xl text-sm font-bold text-right" placeholder="0">
+                </div>
+              </div>
+              <button onclick="submitRevenue()" class="w-full py-4 bg-green-600 text-white rounded-xl font-black text-lg hover:bg-green-700 shadow-lg transition-all active:scale-95">
+                LƯU GIAO DỊCH
+              </button>
+              <div id="revenueNotification"></div>
+            </div>
+
+            <!-- Right: Daily Report -->
+            <div class="bg-blue-50 p-6 rounded-2xl border border-blue-100">
+              <div class="flex items-center justify-between mb-6">
+                <h3 class="font-black text-xs text-blue-600 uppercase tracking-widest">Báo cáo doanh thu hôm nay</h3>
+                <button onclick="refreshDailyReport()" class="text-blue-600 hover:rotate-180 transition-transform duration-500">
+                  <i class="fas fa-sync-alt"></i>
+                </button>
+              </div>
+              <div id="dailyReportContent" class="min-h-[200px] flex flex-col items-center justify-center">
+                <div class="animate-pulse text-gray-400">Đang tải dữ liệu...</div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
-      <!-- Alert Tab -->
-      <section id="alertTab" class="tab-content bg-white p-6 rounded-lg shadow-lg">
-        <h2 class="text-xl font-bold mb-6 text-orange-600">⚠️ Cảnh báo học viên vắng mặt</h2>
-        <div id="alertContent" class="space-y-4 text-center py-8 text-gray-500">
-          <p>Đang kiểm tra dữ liệu vắng mặt...</p>
+      <!-- 5. ALERT TAB -->
+      <section id="alertTab" class="tab-content bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
+        <div class="p-6 space-y-6">
+          <div class="flex items-center justify-between border-b pb-4">
+            <h2 class="text-xl font-black text-orange-600 uppercase">⚠️ Cảnh báo học viên vắng mặt</h2>
+            <button onclick="loadInactiveStudents()" class="bg-orange-100 text-orange-600 px-4 py-2 rounded-lg font-bold text-xs hover:bg-orange-200 transition-colors">
+              LÀM MỚI DANH SÁCH
+            </button>
+          </div>
+          
+          <div class="bg-orange-50 p-4 rounded-xl border border-orange-100 text-sm text-orange-800 italic">
+            <i class="fas fa-info-circle mr-2"></i>Danh sách học viên không check-in trong vòng 5 ngày gần nhất.
+          </div>
+
+          <div id="alertContent" class="min-h-[300px] grid grid-cols-1 md:grid-cols-2 gap-4">
+            <!-- Content loaded via JS -->
+            <div class="col-span-full text-center py-20 text-gray-400">
+              <i class="fas fa-search fa-3x mb-4 block opacity-20"></i>
+              Đang phân tích dữ liệu vắng mặt...
+            </div>
+          </div>
         </div>
-        <button onclick="loadInactiveStudents()" class="w-full py-2 bg-orange-500 text-white rounded-lg">🔄 Kiểm tra lại</button>
       </section>
     </main>
 
     <!-- Footer -->
-    <footer class="version-footer rounded-b-lg bg-white border-t">
-      Phiên bản 2.1 (External Host) – Cập nhật: 31/03/2026 – © Trung tâm ALY GYM
+    <footer class="version-footer">
+      <p class="font-black text-gray-400">ALY GYM MANAGEMENT SYSTEM v2.1 (External Host)</p>
+      <p>Cập nhật cuối: 31/03/2026 • © ALY GYM CENTER</p>
     </footer>
   </div>
 
