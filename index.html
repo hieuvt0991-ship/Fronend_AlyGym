@@ -139,9 +139,15 @@
             </div>
             <div class="form-group"><label>Ngày bắt đầu</label><input id="startDate" type="date" class="form-control-compact font-bold"></div>
             <div id="ptRow" class="hidden space-y-2 pt-2 border-t border-dashed">
-              <div class="form-group"><label>Huấn luyện viên (PT)</label><select id="ptCode" class="form-control-compact font-bold bg-white"></select></div>
-              <div class="form-group"><label>Mã nhóm</label><input id="ptGroupId" type="text" class="form-control-compact text-xs" placeholder="Mã nhóm PT"></div>
-            </div>
+                <div class="form-group"><label>Huấn luyện viên (PT)</label><select id="ptCode" class="form-control-compact font-bold bg-white"></select></div>
+                <div class="form-group">
+                  <label>Mã nhóm</label>
+                  <div class="flex gap-1">
+                    <input id="ptGroupId" type="text" class="form-control-compact text-xs flex-grow" placeholder="Mã nhóm PT">
+                    <button type="button" onclick="document.getElementById('ptGroupId').value = generatePTGroupId()" class="bg-purple-600 text-white px-2 rounded-lg text-[10px] font-bold uppercase">Tạo</button>
+                  </div>
+                </div>
+              </div>
             <div id="registerMonthCardFields" class="flex items-center gap-2 p-2 bg-white rounded-lg border">
               <input id="registerIssueMonthCard" type="checkbox" onchange="updateTotalPrice()" class="w-4 h-4 text-blue-600" checked>
               <label for="registerIssueMonthCard" class="text-[10px] font-black text-gray-600 uppercase">Kèm thẻ tháng</label>
@@ -183,9 +189,10 @@
       <section id="renewTab" class="tab-content bg-white rounded-xl shadow-lg border border-gray-100 p-5">
         <h2 class="text-lg font-black text-gray-800 border-b pb-3 mb-4 uppercase">GIA HẠN GÓI TẬP</h2>
         <div class="bg-gray-50 p-3 rounded-xl border flex flex-col md:flex-row gap-3 items-end mb-4">
-          <div class="flex-grow space-y-1">
+          <div class="flex-grow space-y-1 relative">
             <label class="text-[10px] font-black text-gray-400 uppercase">Tìm kiếm học viên</label>
-            <input id="searchStudentId" type="text" class="form-control-compact font-bold shadow-sm" placeholder="Mã HV / SĐT / Tên">
+            <input id="searchStudentId" type="text" oninput="handleSearchSuggestions(this, 'renew')" class="form-control-compact font-bold shadow-sm" placeholder="Mã HV / SĐT / Tên">
+            <div id="renewSearchSuggestions" class="absolute z-50 left-0 right-0 bg-white border border-gray-200 rounded-xl shadow-2xl mt-1 hidden max-h-48 overflow-y-auto"></div>
           </div>
           <button onclick="searchStudentForRenew()" class="bg-blue-600 text-white px-6 py-2.5 rounded-lg font-black text-xs hover:bg-blue-700 shadow-sm transition-all active:scale-95 uppercase">Tìm kiếm</button>
         </div>
@@ -199,7 +206,13 @@
             <div class="form-group"><label>Ngày bắt đầu</label><input id="renewStartDate" type="date" class="form-control-compact font-bold"></div>
             <div id="renewPtRow" class="hidden space-y-2 pt-2 border-t border-dashed">
               <div class="form-group"><label>PT Gia hạn</label><select id="renewPtCode" class="form-control-compact font-bold bg-white"></select></div>
-              <div class="form-group"><label>Mã nhóm</label><input id="renewPtGroupId" type="text" class="form-control-compact text-xs" placeholder="Mã nhóm"></div>
+              <div class="form-group">
+                <label>Mã nhóm</label>
+                <div class="flex gap-1">
+                  <input id="renewPtGroupId" type="text" class="form-control-compact text-xs flex-grow" placeholder="Mã nhóm">
+                  <button type="button" onclick="document.getElementById('renewPtGroupId').value = generatePTGroupId()" class="bg-purple-600 text-white px-2 rounded-lg text-[10px] font-bold uppercase">Tạo</button>
+                </div>
+              </div>
             </div>
             <div class="flex items-center gap-2 p-2 bg-white rounded-lg border">
               <input id="renewIssueMonthCard" type="checkbox" onchange="recalculateTotal('renew')" class="w-4 h-4 text-blue-600">
@@ -246,9 +259,10 @@
       <section id="pendingTab" class="tab-content bg-white rounded-xl shadow-lg border border-gray-100 p-5">
         <h2 class="text-lg font-black text-gray-800 border-b pb-3 mb-4 uppercase">ĐĂNG KÝ GÓI CHỜ KÍCH HOẠT</h2>
         <div class="bg-gray-50 p-3 rounded-xl border flex flex-col md:flex-row gap-3 items-end mb-4">
-          <div class="flex-grow space-y-1">
+          <div class="flex-grow space-y-1 relative">
             <label class="text-[10px] font-black text-gray-400 uppercase">Tìm kiếm học viên</label>
-            <input id="pendingSearchStudentId" type="text" class="form-control-compact font-bold shadow-sm" placeholder="Mã HV / SĐT / Tên">
+            <input id="pendingSearchStudentId" type="text" oninput="handleSearchSuggestions(this, 'pending')" class="form-control-compact font-bold shadow-sm" placeholder="Mã HV / SĐT / Tên">
+            <div id="pendingSearchSuggestions" class="absolute z-50 left-0 right-0 bg-white border border-gray-200 rounded-xl shadow-2xl mt-1 hidden max-h-48 overflow-y-auto"></div>
           </div>
           <button onclick="searchStudentForPending()" class="bg-blue-600 text-white px-6 py-2.5 rounded-lg font-black text-xs hover:bg-blue-700 shadow-sm transition-all active:scale-95 uppercase">Tìm kiếm</button>
         </div>
