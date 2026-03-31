@@ -143,8 +143,87 @@ export function setActiveTab(tabId) {
   }
 }
 
+export function copyText(elementId) {
+  const el = document.getElementById(elementId);
+  if (el && el.value && navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(el.value).then(() => {
+      el.classList.add('ring-2','ring-green-500');
+      setTimeout(() => { el.classList.remove('ring-2','ring-green-500'); }, 1200);
+    }).catch(()=>{});
+  }
+}
+
+export function pasteText(elementId) {
+  if (navigator.clipboard && navigator.clipboard.readText) {
+    navigator.clipboard.readText().then(t => {
+      const el = document.getElementById(elementId);
+      if (el) {
+        el.value = (t || '').trim();
+        el.classList.add('ring-2','ring-blue-500');
+        setTimeout(() => { el.classList.remove('ring-2','ring-blue-500'); }, 1200);
+        // Trigger change event for any listeners
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+        el.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+    }).catch(()=>{});
+  }
+}
+
+export function generatePTGroupId() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let result = 'G-';
+  for (let i = 0; i < 6; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
+}
+
+export function handleSearchSuggestions(inputEl, tab) {
+  const query = inputEl.value.trim().toLowerCase();
+  const suggestionBox = document.getElementById(`${tab}SearchSuggestions`);
+  
+  if (query.length < 2) {
+    if (suggestionBox) suggestionBox.classList.add('hidden');
+    return;
+  }
+
+  const matches = (window.__allStudentsCache || []).filter(s => 
+    s.id.toLowerCase().includes(query) || 
+    s.name.toLowerCase().includes(query) || 
+    (s.phone && s.phone.includes(query))
+  ).slice(0, 10);
+
+  if (matches.length > 0) {
+    suggestionBox.innerHTML = matches.map(s => `
+      <div class="p-2 hover:bg-blue-100 cursor-pointer border-b last:border-0" onclick="selectSearchSuggestion('${s.id}', '${tab}')">
+        <div class="font-bold text-xs">${s.name}</div>
+        <div class="text-[10px] text-gray-500">${s.id} ${s.phone ? ' - ' + s.phone : ''}</div>
+      </div>
+    `).join('');
+    suggestionBox.classList.remove('hidden');
+  } else {
+    suggestionBox.classList.add('hidden');
+  }
+}
+
+export function selectSearchSuggestion(id, tab) {
+  const inputEl = document.getElementById(tab === 'renew' ? 'searchStudentId' : 'pendingSearchStudentId');
+  const suggestionBox = document.getElementById(`${tab}SearchSuggestions`);
+  if (inputEl) inputEl.value = id;
+  if (suggestionBox) suggestionBox.classList.add('hidden');
+  
+  // Auto trigger search
+  if (tab === 'renew' && typeof window.searchStudentForRenew === 'function') window.searchStudentForRenew();
+  if (tab === 'pending' && typeof window.searchStudentForPending === 'function') window.searchStudentForPending();
+}
+
 // Global exposure for HTML onclick
 window.setActiveTab = setActiveTab;
 window.getStaffName = getStaffName;
 window.setButtonLoading = setButtonLoading;
 window.initStaffName = initStaffName;
+window.copyText = copyText;
+window.pasteText = pasteText;
+window.generatePTGroupId = generatePTGroupId;
+window.handleSearchSuggestions = handleSearchSuggestions;
+window.selectSearchSuggestion = selectSearchSuggestion;

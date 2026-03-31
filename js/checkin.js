@@ -101,14 +101,28 @@ function renderCheckInResult(result) {
   }
 
   box.innerHTML = `
-    <div class="bg-green-50 p-4 rounded shadow border border-green-200 space-y-2">
-      <div class="text-green-800 font-bold text-lg mb-2">✅ ${result.message || 'Điểm danh thành công!'}</div>
-      <div class="grid grid-cols-2 gap-2 text-sm">
-        <div><strong>Mã HV:</strong> ${escapeHtml(result.maHV || result.studentId || '')}</div>
-        <div><strong>Họ tên:</strong> ${escapeHtml(result.hoTen || result.fullName || '')}</div>
-        <div><strong>SĐT:</strong> ${formatPhoneNumber(result.sdt || result.phone || '')}</div>
-        <div><strong>Gói:</strong> ${escapeHtml(result.goi || result.packageCode || '')}</div>
-        <div><strong>Buổi còn lại:</strong> <span class="text-blue-600 font-bold">${result.remain ?? ''}</span></div>
+    <div class="w-full bg-green-50 p-4 rounded-xl border border-green-200 shadow-sm animate-in fade-in zoom-in duration-300">
+      <div class="flex items-center gap-3 mb-3 border-b border-green-100 pb-2">
+        <div class="bg-green-500 text-white p-2 rounded-full shadow-sm"><i class="fas fa-check"></i></div>
+        <div class="text-green-800 font-black text-sm uppercase tracking-tight">${result.message || 'Thành công!'}</div>
+      </div>
+      <div class="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
+        <div class="space-y-1">
+          <span class="text-[10px] font-bold text-gray-400 uppercase block">Học viên</span>
+          <div class="font-black text-gray-800 truncate">${escapeHtml(result.hoTen || result.fullName || '')}</div>
+          <div class="text-blue-600 font-bold">${escapeHtml(result.maHV || result.studentId || '')}</div>
+        </div>
+        <div class="space-y-1">
+          <span class="text-[10px] font-bold text-gray-400 uppercase block">Gói tập</span>
+          <div class="font-bold text-gray-700 truncate">${escapeHtml(result.goi || result.packageCode || '')}</div>
+          <div class="text-orange-600 font-black">CÒN: ${result.remain ?? '0'} BUỔI</div>
+        </div>
+        <div class="col-span-2 pt-2 border-t border-green-100 mt-1">
+          <div class="flex justify-between items-center text-[10px]">
+            <span class="font-bold text-gray-400 uppercase">Liên hệ:</span>
+            <span class="font-black text-gray-700">${formatPhoneNumber(result.sdt || result.phone || '')}</span>
+          </div>
+        </div>
       </div>
     </div>
   `;
