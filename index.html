@@ -174,9 +174,29 @@
                   <option value="Tiền mặt + Chuyển khoản">Cả hai</option>
                 </select>
               </div>
-              <div class="bg-white p-3 rounded-xl border-2 border-green-500 shadow-inner-soft">
+              <!-- Payment Split Fields -->
+              <div id="registerPaymentSplit" class="hidden grid grid-cols-2 gap-2 p-2 bg-gray-100 rounded-lg border border-dashed">
+                <div class="form-group">
+                  <label class="!text-[9px]">Tiền mặt</label>
+                  <input id="registerCashPaid" type="text" oninput="handleMoneyInput(this)" class="form-control-compact !p-1.5 text-xs font-bold" placeholder="0">
+                </div>
+                <div class="form-group">
+                  <label class="!text-[9px]">Chuyển khoản</label>
+                  <input id="registerTransferPaid" type="text" oninput="handleMoneyInput(this)" class="form-control-compact !p-1.5 text-xs font-bold" placeholder="0">
+                </div>
+              </div>
+              <div class="grid grid-cols-2 gap-2">
+                <div class="form-group"><label>Giảm VNĐ</label><input id="discountAmount" type="text" oninput="handleMoneyInput(this); recalculateTotal('register')" class="form-control-compact text-xs font-bold" placeholder="0"></div>
+                <div class="form-group"><label>Giảm %</label><input id="discountPercent" type="number" oninput="recalculateTotal('register')" class="form-control-compact text-xs font-bold" placeholder="0"></div>
+              </div>
+              <div class="form-group">
+                <label>Ghi chú</label>
+                <textarea id="notes" class="form-control-compact text-xs h-16" placeholder="Thông tin thêm..."></textarea>
+              </div>
+              <div class="bg-white p-3 rounded-xl border-2 border-green-500 shadow-inner-soft relative">
                 <label class="text-[10px] font-black text-green-600 mb-1">TỔNG TIỀN</label>
                 <input id="totalPrice" type="text" class="w-full bg-transparent border-none text-xl font-black text-green-700 text-right outline-none" readonly value="0 VNĐ">
+                <div id="registerDebtHint" class="absolute left-3 bottom-1"></div>
               </div>
             </div>
             <button id="registerButton" onclick="submitRegistrationForm()" class="w-full py-3 bg-green-600 text-white rounded-lg font-black text-sm hover:bg-green-700 shadow-lg transition-all active:scale-95 mt-4 uppercase">Đăng ký</button>
@@ -199,57 +219,138 @@
 
         <div id="renewStudentInfo" class="mb-4"></div>
 
-        <form id="renewForm" class="hidden grid grid-cols-1 md:grid-cols-3 gap-5 border-t border-dashed pt-4" onsubmit="return false;">
-          <div class="space-y-3 bg-gray-50 p-4 rounded-xl border">
-            <h3 class="font-black text-[10px] text-purple-600 uppercase tracking-widest border-b pb-1 mb-2">1. GÓI GIA HẠN</h3>
-            <div class="form-group"><label>Gói mới</label><select id="renewPackageCode" onchange="recalculateTotal('renew')" class="form-control-compact font-bold bg-white"></select></div>
-            <div class="form-group"><label>Ngày bắt đầu</label><input id="renewStartDate" type="date" class="form-control-compact font-bold"></div>
-            <div id="renewPtRow" class="hidden space-y-2 pt-2 border-t border-dashed">
-              <div class="form-group"><label>PT Gia hạn</label><select id="renewPtCode" class="form-control-compact font-bold bg-white"></select></div>
+        <form id="renewForm" class="hidden space-y-4 border-t border-dashed pt-4" onsubmit="return false;">
+          <!-- Options Row -->
+          <div class="flex flex-wrap gap-4 items-center bg-blue-50 p-3 rounded-xl border border-blue-100 mb-4">
+            <div class="flex items-center gap-2">
+              <input id="renewSwitchPackageToggle" type="checkbox" onchange="toggleRenewSwitchPackage()" class="w-4 h-4 text-blue-600">
+              <label for="renewSwitchPackageToggle" class="text-[10px] font-black text-blue-700 uppercase">Đổi gói đăng ký khác</label>
+            </div>
+            <div class="flex items-center gap-2">
+              <input id="renewMonthCardOnly" type="checkbox" onchange="toggleRenewMonthCardOnly()" class="w-4 h-4 text-orange-600">
+              <label for="renewMonthCardOnly" class="text-[10px] font-black text-orange-700 uppercase">Chỉ gia hạn thẻ tháng</label>
+            </div>
+            <div id="renewModeContainer" class="flex items-center gap-3 ml-auto">
+              <label class="flex items-center gap-1.5 cursor-pointer">
+                <input type="radio" name="renewMode" value="renewNow" checked onchange="toggleRenewMode()" class="w-3.5 h-3.5">
+                <span class="text-[10px] font-bold text-gray-600 uppercase">Gia hạn ngay</span>
+              </label>
+              <label class="flex items-center gap-1.5 cursor-pointer">
+                <input type="radio" name="renewMode" value="pendingLater" onchange="toggleRenewMode()" class="w-3.5 h-3.5">
+                <span class="text-[10px] font-bold text-gray-600 uppercase">Đăng ký chờ</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+            <!-- Col 1: Gói gia hạn -->
+            <div class="space-y-3 bg-gray-50 p-4 rounded-xl border">
+              <h3 class="font-black text-[10px] text-purple-600 uppercase tracking-widest border-b pb-1 mb-2">1. GÓI GIA HẠN</h3>
+              <div id="renewTrainingTypeContainer" class="form-group hidden">
+                <label>Hình thức tập</label>
+                <select id="renewTrainingType" onchange="updateRenewPackageOptions()" class="form-control-compact font-bold bg-white">
+                  <option value="NonPT">Tự tập (NonPT)</option>
+                  <option value="PT1:1">HLV 1:1 (PT1:1)</option>
+                  <option value="PT2:1">HLV 2:1 (PT2:1)</option>
+                  <option value="PT3:1">HLV 3:1 (PT3:1)</option>
+                </select>
+              </div>
               <div class="form-group">
-                <label>Mã nhóm</label>
-                <div class="flex gap-1">
-                  <input id="renewPtGroupId" type="text" class="form-control-compact text-xs flex-grow" placeholder="Mã nhóm">
-                  <button type="button" onclick="document.getElementById('renewPtGroupId').value = generatePTGroupId()" class="bg-purple-600 text-white px-2 rounded-lg text-[10px] font-bold uppercase">Tạo</button>
+                <label>Gói tập</label>
+                <select id="renewPackageCode" onchange="recalculateTotal('renew')" class="form-control-compact font-bold bg-white"></select>
+              </div>
+              <div id="renewDateContainer" class="form-group">
+                <label id="renewDateLabel">Ngày bắt đầu</label>
+                <input id="renewStartDate" type="date" class="form-control-compact font-bold">
+              </div>
+              
+              <div id="renewPtRow" class="hidden space-y-2 pt-2 border-t border-dashed">
+                <div class="form-group"><label>PT Gia hạn</label><select id="renewPtCode" class="form-control-compact font-bold bg-white"></select></div>
+                <div class="form-group">
+                  <label>Mã nhóm</label>
+                  <div class="flex gap-1">
+                    <input id="renewPtGroupId" type="text" class="form-control-compact text-xs flex-grow" placeholder="Mã nhóm">
+                    <button type="button" onclick="document.getElementById('renewPtGroupId').value = generatePTGroupId()" class="bg-purple-600 text-white px-2 rounded-lg text-[10px] font-bold uppercase">Tạo</button>
+                  </div>
+                </div>
+              </div>
+
+              <div id="renewMonthCardFields" class="flex flex-col gap-2 p-2 bg-white rounded-lg border">
+                <div class="flex items-center gap-2">
+                  <input id="renewIssueMonthCard" type="checkbox" onchange="recalculateTotal('renew')" class="w-4 h-4 text-blue-600">
+                  <label for="renewIssueMonthCard" class="text-[10px] font-black text-gray-600 uppercase">Gia hạn thẻ tháng</label>
+                </div>
+                <div id="renewMonthCardExtra" class="hidden space-y-2 pt-2 border-t border-dashed">
+                  <div class="form-group">
+                    <label class="!text-[9px]">Khu vực</label>
+                    <select id="renewMonthCardSegment" onchange="recalculateTotal('renew')" class="form-control-compact !p-1 text-[10px] font-bold">
+                      <option value="chungCu">Cư dân Chung cư</option>
+                      <option value="ngoai">Khách ngoài</option>
+                    </select>
+                  </div>
                 </div>
               </div>
             </div>
-            <div class="flex items-center gap-2 p-2 bg-white rounded-lg border">
-              <input id="renewIssueMonthCard" type="checkbox" onchange="recalculateTotal('renew')" class="w-4 h-4 text-blue-600">
-              <label for="renewIssueMonthCard" class="text-[10px] font-black text-gray-600 uppercase">Gia hạn thẻ tháng</label>
-            </div>
-          </div>
 
-          <div class="space-y-3 bg-gray-50 p-4 rounded-xl border">
-            <h3 class="font-black text-[10px] text-blue-600 uppercase tracking-widest border-b pb-1 mb-2">2. GIẢM GIÁ & TT</h3>
-            <div class="form-group">
-              <label>Trạng thái</label>
-              <select id="renewPaymentStatus" class="form-control-compact font-bold bg-white">
-                <option value="Đã thanh toán">Đã thanh toán</option>
-                <option value="Thanh toán một phần">Một phần</option>
-                <option value="Chưa thanh toán">Chưa thanh toán</option>
-              </select>
+            <!-- Col 2: Thanh toán & Giảm giá -->
+            <div class="space-y-3 bg-gray-50 p-4 rounded-xl border">
+              <h3 class="font-black text-[10px] text-blue-600 uppercase tracking-widest border-b pb-1 mb-2">2. GIẢM GIÁ & TT</h3>
+              <div class="form-group">
+                <label>Trạng thái</label>
+                <select id="renewPaymentStatus" class="form-control-compact font-bold bg-white">
+                  <option value="Đã thanh toán">Đã thanh toán</option>
+                  <option value="Thanh toán một phần">Một phần</option>
+                  <option value="Chưa thanh toán">Chưa thanh toán</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Hình thức</label>
+                <select id="renewPaymentMethod" class="form-control-compact font-bold bg-white">
+                  <option value="Tiền mặt">Tiền mặt</option>
+                  <option value="Chuyển khoản">Chuyển khoản</option>
+                  <option value="Tiền mặt + Chuyển khoản">Cả hai</option>
+                </select>
+              </div>
+              <!-- Payment Split Fields -->
+              <div id="renewPaymentSplit" class="hidden grid grid-cols-2 gap-2 p-2 bg-gray-100 rounded-lg border border-dashed">
+                <div class="form-group">
+                  <label class="!text-[9px]">Tiền mặt</label>
+                  <input id="renewCashPaid" type="text" oninput="handleMoneyInput(this)" class="form-control-compact !p-1.5 text-xs font-bold" placeholder="0">
+                </div>
+                <div class="form-group">
+                  <label class="!text-[9px]">Chuyển khoản</label>
+                  <input id="renewTransferPaid" type="text" oninput="handleMoneyInput(this)" class="form-control-compact !p-1.5 text-xs font-bold" placeholder="0">
+                </div>
+              </div>
+              <div class="grid grid-cols-2 gap-2">
+                <div class="form-group"><label>Giảm VNĐ</label><input id="renewDiscountAmount" type="text" oninput="handleMoneyInput(this); recalculateTotal('renew')" class="form-control-compact text-xs font-bold" placeholder="0"></div>
+                <div class="form-group"><label>Giảm %</label><input id="renewDiscountPercent" type="number" oninput="recalculateTotal('renew')" class="form-control-compact text-xs font-bold" placeholder="0"></div>
+              </div>
+              <div class="form-group">
+                <label>Ghi chú</label>
+                <textarea id="renewNotes" class="form-control-compact text-xs h-16" placeholder="Thông tin thêm..."></textarea>
+              </div>
             </div>
-            <div class="form-group">
-              <label>Hình thức</label>
-              <select id="renewPaymentMethod" class="form-control-compact font-bold bg-white">
-                <option value="Tiền mặt">Tiền mặt</option>
-                <option value="Chuyển khoản">Chuyển khoản</option>
-                <option value="Tiền mặt + Chuyển khoản">Cả hai</option>
-              </select>
-            </div>
-            <div class="grid grid-cols-2 gap-2">
-              <div class="form-group"><label>Giảm VNĐ</label><input id="renewDiscountAmount" type="text" oninput="handleMoneyInput(this); recalculateTotal('renew')" class="form-control-compact text-xs font-bold" placeholder="0"></div>
-              <div class="form-group"><label>Giảm %</label><input id="renewDiscountPercent" type="number" oninput="recalculateTotal('renew')" class="form-control-compact text-xs font-bold" placeholder="0"></div>
-            </div>
-          </div>
 
-          <div class="bg-green-50 p-4 rounded-xl border border-green-100 flex flex-col justify-between">
-            <div class="bg-white p-3 rounded-xl border-2 border-green-500 shadow-inner-soft">
-              <label class="text-[10px] font-black text-green-600 mb-1 uppercase">TỔNG GIA HẠN</label>
-              <input id="renewTotalPrice" type="text" class="w-full bg-transparent border-none text-xl font-black text-green-700 text-right outline-none" readonly value="0 VNĐ">
+            <!-- Col 3: Tổng tiền & Submit -->
+            <div class="bg-green-50 p-4 rounded-xl border border-green-100 flex flex-col justify-between">
+              <div class="space-y-4">
+                <div class="bg-white p-3 rounded-xl border-2 border-green-500 shadow-inner-soft relative">
+                  <label class="text-[10px] font-black text-green-600 mb-1 uppercase">TỔNG GIA HẠN</label>
+                  <input id="renewTotalPrice" type="text" class="w-full bg-transparent border-none text-xl font-black text-green-700 text-right outline-none" readonly value="0 VNĐ">
+                  <div id="renewDebtHint" class="absolute left-3 bottom-1"></div>
+                </div>
+                <div id="renewPromoInfo" class="hidden"></div>
+              </div>
+              
+              <div class="space-y-2 mt-4">
+                <button id="submitBtn" onclick="confirmAndRenew()" class="w-full py-3 bg-green-600 text-white rounded-lg font-black text-sm hover:bg-green-700 shadow-lg transition-all active:scale-95 uppercase">Xác nhận gia hạn</button>
+                <div id="renewConvertButtons" class="flex flex-col gap-2 mt-2">
+                   <button id="convertToNonPTBtn" onclick="convertToNonPT()" class="hidden w-full py-2 bg-orange-500 text-white rounded-lg font-bold text-[10px] hover:bg-orange-600 uppercase transition-all">↔️ Chuyển sang Tự tập</button>
+                   <button id="convertToPTBtn" onclick="convertToPT()" class="hidden w-full py-2 bg-purple-600 text-white rounded-lg font-bold text-[10px] hover:bg-purple-600 uppercase transition-all">↔️ Chuyển sang PT</button>
+                </div>
+              </div>
             </div>
-            <button id="submitBtn" onclick="confirmAndRenew()" class="w-full py-3 bg-green-600 text-white rounded-lg font-black text-sm hover:bg-green-700 shadow-lg transition-all active:scale-95 mt-4 uppercase">Gia hạn</button>
           </div>
         </form>
         <div id="renewNotification" class="mt-3"></div>
@@ -285,35 +386,47 @@
             <div class="form-group"><label>Ngày kích hoạt dự kiến</label><input id="pendingActivationDate" type="date" class="form-control-compact font-bold"></div>
           </div>
 
-          <div class="space-y-3 bg-gray-50 p-4 rounded-xl border">
-            <h3 class="font-black text-[10px] text-blue-600 uppercase tracking-widest border-b pb-1 mb-2">2. CHI TIẾT & TT</h3>
-            <div id="pendingPtFields" class="hidden space-y-2 mb-2">
-              <div class="form-group"><label>Mã PT</label><select id="pendingPtCode" class="form-control-compact font-bold bg-white"></select></div>
-              <div class="form-group"><label>Mã nhóm PT</label><input id="pendingPtGroupId" type="text" class="form-control-compact text-xs" placeholder="Mã nhóm"></div>
+            <div class="space-y-3 bg-gray-50 p-4 rounded-xl border">
+              <h3 class="font-black text-[10px] text-blue-600 uppercase tracking-widest border-b pb-1 mb-2">2. CHI TIẾT & TT</h3>
+              <div id="pendingPtFields" class="hidden space-y-2 mb-2">
+                <div class="form-group"><label>Mã PT</label><select id="pendingPtCode" class="form-control-compact font-bold bg-white"></select></div>
+                <div class="form-group"><label>Mã nhóm PT</label><input id="pendingPtGroupId" type="text" class="form-control-compact text-xs" placeholder="Mã nhóm"></div>
+              </div>
+              <div class="form-group"><label>Trạng thái</label>
+                <select id="pendingPaymentStatus" class="form-control-compact font-bold bg-white">
+                  <option value="Đã thanh toán">Đã thanh toán</option>
+                  <option value="Thanh toán một phần">Một phần</option>
+                  <option value="Chưa thanh toán">Chưa thanh toán</option>
+                </select>
+              </div>
+              <div class="form-group"><label>Hình thức</label>
+                <select id="pendingPaymentMethod" class="form-control-compact font-bold bg-white">
+                  <option value="Tiền mặt">Tiền mặt</option>
+                  <option value="Chuyển khoản">Chuyển khoản</option>
+                  <option value="Tiền mặt + Chuyển khoản">Cả hai</option>
+                </select>
+              </div>
+              <!-- Payment Split Fields -->
+              <div id="pendingPaymentSplit" class="hidden grid grid-cols-2 gap-2 p-2 bg-gray-100 rounded-lg border border-dashed">
+                <div class="form-group">
+                  <label class="!text-[9px]">Tiền mặt</label>
+                  <input id="pendingCashPaid" type="text" oninput="handleMoneyInput(this)" class="form-control-compact !p-1.5 text-xs font-bold" placeholder="0">
+                </div>
+                <div class="form-group">
+                  <label class="!text-[9px]">Chuyển khoản</label>
+                  <input id="pendingTransferPaid" type="text" oninput="handleMoneyInput(this)" class="form-control-compact !p-1.5 text-xs font-bold" placeholder="0">
+                </div>
+              </div>
             </div>
-            <div class="form-group"><label>Trạng thái thanh toán</label>
-              <select id="pendingPaymentStatus" class="form-control-compact font-bold bg-white">
-                <option value="Đã thanh toán">Đã thanh toán</option>
-                <option value="Thanh toán một phần">Một phần</option>
-                <option value="Chưa thanh toán">Chưa thanh toán</option>
-              </select>
-            </div>
-            <div class="form-group"><label>Hình thức thanh toán</label>
-              <select id="pendingPaymentMethod" class="form-control-compact font-bold bg-white">
-                <option value="Tiền mặt">Tiền mặt</option>
-                <option value="Chuyển khoản">Chuyển khoản</option>
-                <option value="Tiền mặt + Chuyển khoản">Cả hai</option>
-              </select>
-            </div>
-          </div>
 
-          <div class="bg-green-50 p-4 rounded-xl border border-green-100 flex flex-col justify-between">
-            <div class="bg-white p-3 rounded-xl border-2 border-green-500 shadow-inner-soft">
-              <label class="text-[10px] font-black text-green-600 mb-1 uppercase">TỔNG TIỀN GÓI CHỜ</label>
-              <input id="pendingTotalPrice" type="text" class="w-full bg-transparent border-none text-xl font-black text-green-700 text-right outline-none" readonly value="0 VNĐ">
+            <div class="bg-green-50 p-4 rounded-xl border border-green-100 flex flex-col justify-between">
+              <div class="bg-white p-3 rounded-xl border-2 border-green-500 shadow-inner-soft relative">
+                <label class="text-[10px] font-black text-green-600 mb-1 uppercase">TỔNG GÓI CHỜ</label>
+                <input id="pendingTotalPrice" type="text" class="w-full bg-transparent border-none text-xl font-black text-green-700 text-right outline-none" readonly value="0 VNĐ">
+                <div id="pendingDebtHint" class="absolute left-3 bottom-1"></div>
+              </div>
+              <button id="pendingSubmitButton" onclick="submitPendingForm()" class="w-full py-3 bg-green-600 text-white rounded-lg font-black text-sm hover:bg-green-700 shadow-lg transition-all active:scale-95 mt-4 uppercase">Đăng ký gói chờ</button>
             </div>
-            <button id="pendingSubmitButton" onclick="submitPendingForm()" class="w-full py-3 bg-green-600 text-white rounded-lg font-black text-sm hover:bg-green-700 shadow-lg transition-all active:scale-95 mt-4 uppercase">Đăng ký gói chờ</button>
-          </div>
         </form>
         <div id="pendingNotification" class="mt-3"></div>
       </section>
