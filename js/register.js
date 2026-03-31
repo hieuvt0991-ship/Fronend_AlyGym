@@ -100,7 +100,10 @@ export function submitRegistrationForm() {
     paymentMethod: document.getElementById('paymentMethod')?.value || 'Tiền mặt',
     staff: getStaffName(),
     notes: document.getElementById('notes')?.value || '',
-    referrer: document.getElementById('referrer')?.value || ''
+    referrer: document.getElementById('referrer')?.value || '',
+    issueMonthCard: document.getElementById('registerIssueMonthCard')?.checked || false,
+    ptCode: document.getElementById('ptCode')?.value || '',
+    ptGroupId: document.getElementById('ptGroupId')?.value || ''
   };
 
   apiRunner

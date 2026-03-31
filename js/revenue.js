@@ -4,8 +4,8 @@
  */
 
 import { apiRunner } from './api.js';
-import { showLoading, showError, showSuccess, formatMoney } from './utils.js';
-import { getStaffName } from './init.js';
+import { showLoading, showError, showSuccess, getStaffName } from './utils.js';
+import { formatMoney, parseMoney } from './money.js';
 
 export function submitRevenue() {
   const description = document.getElementById('revDescription')?.value.trim();
@@ -20,9 +20,11 @@ export function submitRevenue() {
   
   const data = {
     type: document.getElementById('revType').value,
-    description,
+    description: description,
     quantity: document.getElementById('revQuantity').value,
-    price,
+    price: parseMoney(price),
+    paymentStatus: document.getElementById('revPaymentStatus').value,
+    paymentMethod: document.getElementById('revPaymentMethod').value,
     staff: getStaffName()
   };
 

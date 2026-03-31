@@ -91,7 +91,8 @@ export const apiRunner = {
   'setupPendingPackageTriggers',
   'getPackagePromotionDetails',
   'getPTList',
-  'getAllPackages'
+  'getAllPackages',
+  'checkInactiveStudents'
 ].forEach(action => {
   apiRunner[action] = function(...args) {
     this.__call(action, ...args);
