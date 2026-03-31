@@ -41,33 +41,34 @@ export function calculateFinalPrice(pkgPrice, cardPrice, discountAmount, discoun
 
 export function setTotalWithMonthCard(pkgPrice, mode = 'register') {
   let seg = 'chungCu';
-  let trainingType = 'NonPT';
   let el = null;
   let issueCard = false;
+  let updateHint = null;
   
   if (mode === 'renew') {
     seg = document.getElementById('renewMonthCardSegment')?.value || 'chungCu';
-    trainingType = document.getElementById('renewTrainingType')?.value;
     el = document.getElementById('renewTotalPrice');
-    const issueCardCheck = document.getElementById('renewIssueMonthCard')?.checked;
-    const onlyCard = document.getElementById('renewMonthCardOnly')?.checked;
-    if (onlyCard || (trainingType && trainingType.startsWith('PT') && issueCardCheck)) {
-      issueCard = true;
-    }
+    issueCard = document.getElementById('renewIssueMonthCard')?.checked;
+    updateHint = window.__updateRenewPaymentHint;
+  } else if (mode === 'pending') {
+    seg = document.getElementById('pendingMonthCardSegment')?.value || 'chungCu';
+    el = document.getElementById('pendingTotalPrice');
+    issueCard = document.getElementById('pendingIssueMonthCard')?.checked;
+    updateHint = window.__updatePendingPaymentHint;
   } else {
-    seg = document.getElementById('registerMonthCardSegment')?.value || 'chungCu';
-    trainingType = document.getElementById('trainingType')?.value;
+    seg = 'chungCu'; // Default for new registration (or add select to UI)
     el = document.getElementById('totalPrice');
-    if (trainingType && trainingType.startsWith('PT')) issueCard = true;
+    issueCard = document.getElementById('registerIssueMonthCard')?.checked;
+    updateHint = window.__updateRegisterPaymentHint;
   }
 
   const discountAmount = mode === 'renew'
     ? parseMoney(document.getElementById('renewDiscountAmount')?.value || '0')
-    : parseMoney(document.getElementById('discountAmount')?.value || '0');
+    : (mode === 'pending' ? parseMoney(document.getElementById('pendingDiscountAmount')?.value || '0') : parseMoney(document.getElementById('discountAmount')?.value || '0'));
         
   const discountPercent = mode === 'renew'
     ? parseFloat(document.getElementById('renewDiscountPercent')?.value || '0')
-    : parseFloat(document.getElementById('discountPercent')?.value || '0');
+    : (mode === 'pending' ? parseFloat(document.getElementById('pendingDiscountPercent')?.value || '0') : parseFloat(document.getElementById('discountPercent')?.value || '0'));
 
   let cardPrice = 0;
   if (issueCard) {
@@ -77,6 +78,9 @@ export function setTotalWithMonthCard(pkgPrice, mode = 'register') {
   const total = calculateFinalPrice(pkgPrice, cardPrice, discountAmount, discountPercent);
   if (el) {
     el.value = formatMoney(total, true);
+    el.dataset.basePrice = pkgPrice;
+    // Trigger debt hint update if payment block is initialized
+    if (typeof updateHint === 'function') updateHint();
   }
 }
 

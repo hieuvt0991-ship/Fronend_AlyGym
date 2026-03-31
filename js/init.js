@@ -38,4 +38,49 @@ document.addEventListener('DOMContentLoaded', () => {
   initStaffName();
   loadInitialData();
   setActiveTab('checkIn');
+
+  // Setup Payment Blocks
+  setupPaymentBlock({
+    statusId: 'paymentStatus',
+    methodId: 'paymentMethod',
+    splitId: 'registerPaymentSplit',
+    cashId: 'registerCashPaid',
+    transferId: 'registerTransferPaid',
+    hintId: 'registerDebtHint',
+    getTotal: () => window.parseMoney(document.getElementById('totalPrice')?.value || '0')
+  });
+
+  setupPaymentBlock({
+    statusId: 'renewPaymentStatus',
+    methodId: 'renewPaymentMethod',
+    splitId: 'renewPaymentSplit',
+    cashId: 'renewCashPaid',
+    transferId: 'renewTransferPaid',
+    hintId: 'renewDebtHint',
+    getTotal: () => window.parseMoney(document.getElementById('renewTotalPrice')?.value || '0')
+  });
+
+  setupPaymentBlock({
+    statusId: 'pendingPaymentStatus',
+    methodId: 'pendingPaymentMethod',
+    splitId: 'pendingPaymentSplit',
+    cashId: 'pendingCashPaid',
+    transferId: 'pendingTransferPaid',
+    hintId: 'pendingDebtHint',
+    getTotal: () => window.parseMoney(document.getElementById('pendingTotalPrice')?.value || '0')
+  });
+
+  setupPaymentBlock({
+    statusId: 'revPaymentStatus',
+    methodId: 'revPaymentMethod',
+    splitId: 'revPaymentSplit',
+    cashId: 'revCashPaid',
+    transferId: 'revTransferPaid',
+    hintId: 'revDebtHint',
+    getTotal: () => {
+      const q = Number(document.getElementById('revQuantity')?.value || 0);
+      const p = window.parseMoney(document.getElementById('revPrice')?.value || '0');
+      return q * p;
+    }
+  });
 });

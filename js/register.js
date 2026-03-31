@@ -98,6 +98,8 @@ export function submitRegistrationForm() {
     price: document.getElementById('packageCode').selectedOptions[0]?.dataset.price || 0,
     paymentStatus: document.getElementById('paymentStatus')?.value || 'Đã thanh toán',
     paymentMethod: document.getElementById('paymentMethod')?.value || 'Tiền mặt',
+    cashPaid: parseMoney(document.getElementById('registerCashPaid')?.value || '0'),
+    transferPaid: parseMoney(document.getElementById('registerTransferPaid')?.value || '0'),
     staff: getStaffName(),
     notes: document.getElementById('notes')?.value || '',
     referrer: document.getElementById('referrer')?.value || '',
@@ -110,8 +112,11 @@ export function submitRegistrationForm() {
     .withSuccessHandler(result => {
       setButtonLoading('registerButton', false);
       if (result && result.status === 'success') {
-        showSuccess('registerNotification', `Đăng ký thành công! Mã HV: ${result.studentId}`);
+        const student = result.data;
+        showSuccess('registerNotification', `Đăng ký thành công! Mã HV: ${student.studentId}`);
         document.getElementById('registerForm').reset();
+        // Reset specific UI states
+        if (typeof window.recalculateTotal === 'function') window.recalculateTotal('register');
         updatePackageOptions();
       } else {
         showError('registerNotification', result?.message || 'Có lỗi xảy ra.');
@@ -123,6 +128,20 @@ export function submitRegistrationForm() {
     })
     .registerStudent(formData);
 }
+
+// Initialize Payment Logic
+setupPaymentBlock({
+  statusId: 'paymentStatus',
+  methodId: 'paymentMethod',
+  splitId: 'registerPaymentSplit',
+  cashId: 'registerCashPaid',
+  transferId: 'registerTransferPaid',
+  hintId: 'registerDebtHint',
+  getTotal: () => parseMoney(document.getElementById('totalPrice')?.value || '0'),
+  onInit: (update) => {
+    window.__updateRegisterPaymentHint = update;
+  }
+});
 
 export function updatePTOptions() {
   const select = document.getElementById('ptCode');

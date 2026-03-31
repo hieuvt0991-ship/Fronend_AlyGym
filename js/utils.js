@@ -169,20 +169,23 @@ export function pasteText(elementId) {
   }
 }
 
-export function generatePTGroupId() {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-  let result = 'G-';
-  for (let i = 0; i < 6; i++) {
-    result += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return result;
+export function generatePTGroupId(tab = 'register') {
+  const packageCode = document.getElementById(tab === 'renew' ? 'renewPackageCode' : 'packageCode')?.value || 'PKG';
+  const today = new Date();
+  const dd = String(today.getDate()).padStart(2, '0');
+  const mm = String(today.getMonth() + 1).padStart(2, '0');
+  const yyyy = today.getFullYear();
+  const dateStr = `${dd}${mm}${yyyy}`;
+  const rand = Math.random().toString(36).toUpperCase().replace(/[^A-Z0-9]/g, '').slice(-4);
+  
+  return `${packageCode}_${dateStr}_${rand}`;
 }
 
 export function handleSearchSuggestions(inputEl, tab) {
   const query = inputEl.value.trim().toLowerCase();
   const suggestionBox = document.getElementById(`${tab}SearchSuggestions`);
   
-  if (query.length < 2) {
+  if (query.length < 1) {
     if (suggestionBox) suggestionBox.classList.add('hidden');
     return;
   }
@@ -191,13 +194,19 @@ export function handleSearchSuggestions(inputEl, tab) {
     s.id.toLowerCase().includes(query) || 
     s.name.toLowerCase().includes(query) || 
     (s.phone && s.phone.includes(query))
-  ).slice(0, 10);
+  ).slice(0, 15);
 
   if (matches.length > 0) {
     suggestionBox.innerHTML = matches.map(s => `
-      <div class="p-2 hover:bg-blue-100 cursor-pointer border-b last:border-0" onclick="selectSearchSuggestion('${s.id}', '${tab}')">
-        <div class="font-bold text-xs">${s.name}</div>
-        <div class="text-[10px] text-gray-500">${s.id} ${s.phone ? ' - ' + s.phone : ''}</div>
+      <div class="p-2 hover:bg-blue-50 cursor-pointer border-b last:border-0 transition-colors" onclick="selectSearchSuggestion('${s.id}', '${tab}')">
+        <div class="flex justify-between items-center">
+          <div class="font-black text-xs text-blue-900">${escapeHtml(s.name)}</div>
+          <div class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-blue-100 text-blue-700">${s.id}</div>
+        </div>
+        <div class="text-[10px] text-gray-500 mt-0.5 flex gap-2">
+          <span><i class="fas fa-phone-alt mr-1"></i>${s.phone || 'N/A'}</span>
+          ${s.package ? `<span class="text-orange-600 font-bold"><i class="fas fa-box mr-1"></i>${s.package}</span>` : ''}
+        </div>
       </div>
     `).join('');
     suggestionBox.classList.remove('hidden');
@@ -217,6 +226,78 @@ export function selectSearchSuggestion(id, tab) {
   if (tab === 'pending' && typeof window.searchStudentForPending === 'function') window.searchStudentForPending();
 }
 
+export function setupPaymentBlock(cfg) {
+  const statusEl = document.getElementById(cfg.statusId);
+  const methodEl = document.getElementById(cfg.methodId);
+  if (!statusEl || !methodEl) return;
+
+  const splitEl = cfg.splitId ? document.getElementById(cfg.splitId) : null;
+  const cashEl = cfg.cashId ? document.getElementById(cfg.cashId) : null;
+  const transferEl = cfg.transferId ? document.getElementById(cfg.transferId) : null;
+  const hintEl = cfg.hintId ? document.getElementById(cfg.hintId) : null;
+
+  const getTotal = () => {
+    if (typeof cfg.getTotal === 'function') return cfg.getTotal();
+    return 0;
+  };
+
+  const parseVnd = (text) => Number(String(text || '').replace(/[^0-9]/g, '')) || 0;
+
+  const updateHint = () => {
+    const total = getTotal();
+    const paid = parseVnd(cashEl?.value) + parseVnd(transferEl?.value);
+    if (!hintEl) return;
+    
+    const debt = total - paid;
+    if (statusEl.value === 'Chưa thanh toán') {
+      hintEl.textContent = total > 0 ? `Còn nợ: ${window.formatMoney(total, true)}` : '';
+      hintEl.className = "text-[10px] font-bold text-red-500 mt-1";
+      return;
+    }
+    if (paid <= 0) {
+      hintEl.textContent = '';
+      return;
+    }
+    if (debt > 0) {
+      hintEl.textContent = `Còn nợ: ${window.formatMoney(debt, true)}`;
+      hintEl.className = "text-[10px] font-bold text-orange-500 mt-1";
+    } else if (debt < 0) {
+      hintEl.textContent = `Dư: ${window.formatMoney(-debt, true)}`;
+      hintEl.className = "text-[10px] font-bold text-blue-500 mt-1";
+    } else {
+      hintEl.textContent = 'Đã đủ';
+      hintEl.className = "text-[10px] font-bold text-green-500 mt-1";
+    }
+  };
+
+  const applyState = () => {
+    const status = statusEl.value;
+    if (status === 'Chưa thanh toán') {
+      methodEl.value = '';
+      methodEl.disabled = true;
+      if (splitEl) splitEl.classList.add('hidden');
+      updateHint();
+      return;
+    }
+    methodEl.disabled = false;
+    if (!methodEl.value) methodEl.value = 'Tiền mặt';
+    if (splitEl) {
+      const isSplit = methodEl.value === 'Tiền mặt + Chuyển khoản';
+      splitEl.classList.toggle('hidden', !isSplit);
+    }
+    updateHint();
+  };
+
+  statusEl.addEventListener('change', applyState);
+  methodEl.addEventListener('change', applyState);
+  if (cashEl) cashEl.addEventListener('input', updateHint);
+  if (transferEl) transferEl.addEventListener('input', updateHint);
+
+  // Expose updateHint to be called externally if total changes
+  cfg.onInit?.(updateHint);
+  applyState();
+}
+
 // Global exposure for HTML onclick
 window.setActiveTab = setActiveTab;
 window.getStaffName = getStaffName;
@@ -227,3 +308,4 @@ window.pasteText = pasteText;
 window.generatePTGroupId = generatePTGroupId;
 window.handleSearchSuggestions = handleSearchSuggestions;
 window.selectSearchSuggestion = selectSearchSuggestion;
+window.setupPaymentBlock = setupPaymentBlock;
