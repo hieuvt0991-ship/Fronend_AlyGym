@@ -149,6 +149,10 @@
                 <select id="ptCode" class="w-full p-3 border rounded-xl text-sm font-bold bg-white"></select>
                 <input id="ptGroupId" type="text" class="w-full p-3 border rounded-xl text-xs font-bold" placeholder="Mã nhóm (nếu có)">
               </div>
+              <div id="registerMonthCardFields" class="flex items-center gap-2 p-2 bg-white rounded-lg border">
+                <input id="registerIssueMonthCard" type="checkbox" onchange="updateTotalPrice()" class="w-4 h-4 text-blue-600" checked>
+                <label for="registerIssueMonthCard" class="text-xs font-bold text-gray-600">KÈM THẺ THÁNG</label>
+              </div>
             </div>
 
             <!-- Payment -->
@@ -196,25 +200,54 @@
 
           <div id="renewStudentInfo"></div>
 
-          <form id="renewForm" class="hidden grid grid-cols-1 md:grid-cols-2 gap-8 pt-6 border-t border-dashed" onsubmit="return false;">
-            <div class="space-y-4">
-              <h3 class="font-black text-xs text-purple-600 uppercase tracking-widest">Cấu hình gia hạn</h3>
+          <form id="renewForm" class="hidden grid grid-cols-1 md:grid-cols-3 gap-6 pt-6 border-t border-dashed" onsubmit="return false;">
+            <!-- Renew Package Info -->
+            <div class="space-y-4 bg-gray-50 p-5 rounded-2xl border">
+              <h3 class="font-black text-xs text-purple-600 uppercase tracking-widest mb-4">1. Cấu hình gia hạn</h3>
               <div>
                 <label class="block text-[10px] font-bold text-gray-400 mb-1">CHỌN GÓI MỚI</label>
-                <select id="renewPackageCode" onchange="updateRenewPackageOptions()" class="w-full p-4 border rounded-xl text-sm font-bold bg-white"></select>
+                <select id="renewPackageCode" onchange="recalculateTotal('renew')" class="w-full p-3 border rounded-xl text-sm font-bold bg-white"></select>
               </div>
               <div>
                 <label class="block text-[10px] font-bold text-gray-400 mb-1">NGÀY BẮT ĐẦU GIA HẠN</label>
-                <input id="renewStartDate" type="date" class="w-full p-4 border rounded-xl text-sm font-bold">
+                <input id="renewStartDate" type="date" class="w-full p-3 border rounded-xl text-sm font-bold">
+              </div>
+              <div id="renewPtRow" class="hidden space-y-3 pt-3 border-t border-dashed">
+                <select id="renewPtCode" class="w-full p-3 border rounded-xl text-sm font-bold bg-white"></select>
+                <input id="renewPtGroupId" type="text" class="w-full p-3 border rounded-xl text-xs font-bold" placeholder="Mã nhóm (nếu có)">
+              </div>
+              <div class="flex items-center gap-2 p-2 bg-white rounded-lg border">
+                <input id="renewIssueMonthCard" type="checkbox" onchange="recalculateTotal('renew')" class="w-4 h-4 text-blue-600">
+                <label for="renewIssueMonthCard" class="text-xs font-bold text-gray-600">GIA HẠN THẺ THÁNG</label>
               </div>
             </div>
 
-            <div class="bg-green-50 p-6 rounded-2xl border border-green-100 space-y-4 flex flex-col justify-between">
-              <div class="bg-white p-5 rounded-xl border-2 border-green-500 shadow-inner-soft">
-                <label class="block text-[10px] font-black text-green-600 mb-1">TỔNG TIỀN GIA HẠN</label>
-                <input id="renewTotalPrice" type="text" class="w-full bg-transparent border-none text-3xl font-black text-green-700 text-right outline-none" readonly value="0 VNĐ">
+            <!-- Renew Payment Status -->
+            <div class="space-y-4 bg-gray-50 p-5 rounded-2xl border">
+              <h3 class="font-black text-xs text-blue-600 uppercase tracking-widest mb-4">2. Thanh toán & Giảm giá</h3>
+              <select id="renewPaymentStatus" class="w-full p-3 border rounded-xl text-sm font-bold bg-white">
+                <option value="Đã thanh toán">Đã thanh toán</option>
+                <option value="Thanh toán một phần">Thanh toán một phần</option>
+                <option value="Chưa thanh toán">Chưa thanh toán</option>
+              </select>
+              <select id="renewPaymentMethod" class="w-full p-3 border rounded-xl text-sm font-bold bg-white">
+                <option value="Tiền mặt">Tiền mặt</option>
+                <option value="Chuyển khoản">Chuyển khoản</option>
+                <option value="Tiền mặt + Chuyển khoản">Cả hai</option>
+              </select>
+              <div class="grid grid-cols-2 gap-2">
+                <input id="renewDiscountAmount" type="text" oninput="handleMoneyInput(this); recalculateTotal('renew')" class="w-full p-2.5 border rounded-xl text-xs font-bold" placeholder="Giảm VNĐ">
+                <input id="renewDiscountPercent" type="number" oninput="recalculateTotal('renew')" class="w-full p-2.5 border rounded-xl text-xs font-bold" placeholder="Giảm %">
               </div>
-              <button id="submitBtn" onclick="confirmAndRenew()" class="w-full py-5 bg-green-600 text-white rounded-xl font-black text-xl hover:bg-green-700 shadow-xl transition-all active:scale-95">
+            </div>
+
+            <!-- Renew Submit -->
+            <div class="bg-green-50 p-5 rounded-2xl border border-green-100 flex flex-col justify-between">
+              <div class="bg-white p-4 rounded-xl border-2 border-green-500 shadow-inner-soft">
+                <label class="block text-[10px] font-black text-green-600 mb-1">TỔNG TIỀN GIA HẠN</label>
+                <input id="renewTotalPrice" type="text" class="w-full bg-transparent border-none text-2xl font-black text-green-700 text-right outline-none" readonly value="0 VNĐ">
+              </div>
+              <button id="submitBtn" onclick="confirmAndRenew()" class="w-full py-4 bg-green-600 text-white rounded-xl font-black text-lg hover:bg-green-700 shadow-xl transition-all active:scale-95 mt-4">
                 XÁC NHẬN GIA HẠN
               </button>
             </div>
@@ -253,6 +286,22 @@
                 <div>
                   <label class="block text-[10px] font-bold text-gray-400 mb-1">ĐƠN GIÁ (VNĐ)</label>
                   <input type="text" id="revPrice" oninput="handleMoneyInput(this)" class="w-full p-3 border rounded-xl text-sm font-bold text-right" placeholder="0">
+                </div>
+                <div class="col-span-2 grid grid-cols-2 gap-4">
+                  <div>
+                    <label class="block text-[10px] font-bold text-gray-400 mb-1">THANH TOÁN</label>
+                    <select id="revPaymentStatus" class="w-full p-3 border rounded-xl text-sm font-bold bg-white">
+                      <option value="Đã thanh toán">Đã xong</option>
+                      <option value="Chưa thanh toán">Nợ</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="block text-[10px] font-bold text-gray-400 mb-1">HÌNH THỨC</label>
+                    <select id="revPaymentMethod" class="w-full p-3 border rounded-xl text-sm font-bold bg-white">
+                      <option value="Tiền mặt">Tiền mặt</option>
+                      <option value="Chuyển khoản">CK</option>
+                    </select>
+                  </div>
                 </div>
               </div>
               <button onclick="submitRevenue()" class="w-full py-4 bg-green-600 text-white rounded-xl font-black text-lg hover:bg-green-700 shadow-lg transition-all active:scale-95">
