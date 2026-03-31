@@ -27,6 +27,7 @@ export function loadInitialData() {
       if (typeof window.updatePackageOptions === 'function') window.updatePackageOptions();
       if (typeof window.updatePTOptions === 'function') window.updatePTOptions();
       if (typeof window.updateRenewPackageOptions === 'function') window.updateRenewPackageOptions();
+      if (typeof window.updatePendingPackageOptions === 'function') window.updatePendingPackageOptions();
     })
     .withFailureHandler(err => console.error('Lỗi tải dữ liệu ban đầu:', err))
     .getInitialData();

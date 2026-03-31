@@ -63,7 +63,7 @@ export function updateRenewPackageOptions() {
   const select = document.getElementById('renewPackageCode');
   if (!select) return;
   
-  const studentId = document.getElementById('searchStudentId').value;
+  const studentId = document.getElementById('searchStudentId')?.value || '';
   const isPT = studentId.startsWith('APT');
   
   select.innerHTML = '<option value="">Chọn gói gia hạn</option>';
