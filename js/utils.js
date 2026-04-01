@@ -1,6 +1,6 @@
 /**
  * @file utils.js
- * @description Shared utilities - SINGLE SOURCE OF TRUTH
+ * @description SINGLE SOURCE OF TRUTH - All utilities for ALY GYM
  */
 
 // ==================== UI HELPERS ====================
@@ -51,7 +51,10 @@ export function showToast(message, type = 'info') {
   toast.className = `toast toast-${type}`;
   toast.innerHTML = `<span>${message}</span>`;
   container.appendChild(toast);
-  setTimeout(() => { toast.style.animation = 'fadeOut 0.5s forwards'; setTimeout(() => toast.remove(), 500); }, 3500);
+  setTimeout(() => {
+    toast.style.animation = 'fadeOut 0.5s ease-out forwards';
+    setTimeout(() => toast.remove(), 500);
+  }, 3500);
 }
 
 // ==================== VALIDATION & FORMATTING ====================
@@ -77,22 +80,45 @@ export function generatePTGroupId(tab = 'register') {
   return `GRP${code}_${date}_${rand}`;
 }
 
-// ==================== GLOBAL EXPOSURE (QUAN TRỌNG NHẤT) ====================
+// ==================== TAB MANAGEMENT ====================
+export function setActiveTab(tabName) {
+  document.querySelectorAll('.tab-content').forEach(tab => {
+    tab.style.display = 'none';
+    tab.classList.remove('active');
+  });
+  const target = document.getElementById(tabName + 'Tab');
+  if (target) {
+    target.style.display = 'block';
+    target.classList.add('active');
+  }
+}
+
+// ==================== GLOBAL EXPOSURE (DUY NHẤT) ====================
 export {
-  showToast, setButtonLoading, showLoading, showSuccess, showError,
-  initStaffName, getStaffName, validatePhone, escapeHtml,
-  formatPhoneNumber, generatePTGroupId
+  initStaffName,
+  getStaffName,
+  setButtonLoading,
+  showLoading,
+  showSuccess,
+  showError,
+  showToast,
+  validatePhone,
+  escapeHtml,
+  formatPhoneNumber,
+  generatePTGroupId,
+  setActiveTab
 };
 
 // Expose ra window để HTML onclick hoạt động
-window.showToast = showToast;
+window.initStaffName = initStaffName;
+window.getStaffName = getStaffName;
 window.setButtonLoading = setButtonLoading;
 window.showLoading = showLoading;
 window.showSuccess = showSuccess;
 window.showError = showError;
-window.initStaffName = initStaffName;
-window.getStaffName = getStaffName;
+window.showToast = showToast;
 window.validatePhone = validatePhone;
 window.escapeHtml = escapeHtml;
 window.formatPhoneNumber = formatPhoneNumber;
 window.generatePTGroupId = generatePTGroupId;
+window.setActiveTab = setActiveTab;
