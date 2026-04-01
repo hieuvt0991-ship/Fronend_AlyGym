@@ -1,6 +1,6 @@
 /**
  * @file register.js
- * @description Logic for registering new students.
+ * @description Logic for registering new students with full global exposure and API integration.
  */
 
 import { apiRunner } from './api.js';
@@ -27,7 +27,7 @@ export function updatePackageOptions() {
   if (type === 'NonPT') {
     filteredPackages = pkgList.filter(p => p.type === 'Gym_NonPT');
   } else {
-    // Lọc các gói PT theo subtype (1:1, 2:1, 3:1) - Khớp với logic cũ: mã bắt đầu bằng type
+    // Lọc các gói PT theo subtype (1:1, 2:1, 3:1) - Khớp với logic cũ
     filteredPackages = pkgList.filter(p => p.type === 'Gym_PT' && String(p.code || '').startsWith(type));
   }
   
@@ -78,10 +78,10 @@ export function togglePTFields() {
   updatePackageOptions();
 }
 
+/**
+ * Tạo mã nhóm PT cho đăng ký mới.
+ */
 export function generatePTGroupIdRegister() {
-  const trainingType = document.getElementById('trainingType')?.value || '';
-  if (trainingType !== 'PT2:1' && trainingType !== 'PT3:1') return;
-  
   const id = window.generatePTGroupId('register');
   const input = document.getElementById('ptGroupId');
   if (input) {
@@ -112,11 +112,6 @@ export function submitRegistrationForm() {
   
   const pkgSelect = document.getElementById('packageCode');
   const selectedPkg = pkgSelect ? pkgSelect.selectedOptions[0] : null;
-
-  if (!selectedPkg || !packageCode) {
-    showToast('Vui lòng chọn gói tập hợp lệ!', 'warning');
-    return;
-  }
 
   const formData = {
     fullName,
@@ -153,15 +148,9 @@ export function submitRegistrationForm() {
     .withSuccessHandler(result => {
       setButtonLoading('registerButton', false);
       if (result && result.status === 'success') {
-        const student = result.data;
-        showSuccess('registerNotification', `Đăng ký thành công! Mã HV: ${student.studentId}`);
+        showSuccess('registerNotification', `Đăng ký thành công! Mã HV: ${result.data.studentId}`);
         document.getElementById('registerForm').reset();
-        
-        // Reset về mặc định
-        if (typeof window.recalculateTotal === 'function') window.recalculateTotal('register');
         togglePTFields();
-        
-        // Làm mới cache học viên để gợi ý search
         if (typeof window.refreshStudentCache === 'function') window.refreshStudentCache();
       } else {
         showError('registerNotification', result?.message || 'Có lỗi xảy ra.');
@@ -175,10 +164,10 @@ export function submitRegistrationForm() {
 }
 
 /**
- * Cập nhật danh sách PT vào tất cả các dropdown PT (Đăng ký & Gia hạn).
+ * Cập nhật danh sách PT vào tất cả các dropdown PT.
  */
 export function updatePTOptions() {
-  const selects = ['ptCode', 'renewPtCode'];
+  const selects = ['ptCode', 'renewPtCode', 'pendingPtCode'];
   const ptList = window.ptList || [];
 
   selects.forEach(id => {
@@ -187,10 +176,7 @@ export function updatePTOptions() {
     
     const currentValue = select.value;
     select.innerHTML = '<option value="">-- Chọn PT --</option>';
-    
-    ptList.forEach(pt => {
-      select.add(new Option(pt.name, pt.code));
-    });
+    ptList.forEach(pt => select.add(new Option(pt.name, pt.code)));
     
     if (currentValue && [...select.options].some(o => o.value === currentValue)) {
       select.value = currentValue;

@@ -1,6 +1,6 @@
 /**
  * @file checkin.js
- * @description Logic for student attendance (manual and QR).
+ * @description Logic for student attendance (manual and QR) with full global exposure and API integration.
  */
 
 import { apiRunner } from './api.js';
@@ -61,7 +61,6 @@ export function selectStudentSuggestion(id, name) {
   if (inputEl) inputEl.value = id;
   if (suggestionBox) suggestionBox.classList.add('hidden');
   
-  // Tự động chuyển hình thức tập
   const trainingTypeEl = document.getElementById('checkinTrainingType');
   if (trainingTypeEl) {
     if (id.startsWith('APT')) trainingTypeEl.value = 'PT';
@@ -137,7 +136,6 @@ export function submitCheckInCaller(input, source = 'manual') {
   
   const doneEarly = () => {
     try { setButtonLoading('checkInButton', false); } catch (e) {}
-    try { if (window.qrScanner && window.qrScanner.__processing) window.qrScanner.__processing = false; } catch (e) {}
   };
 
   const setTrainingTypeSelectValue = (value) => {
@@ -176,7 +174,6 @@ export function submitCheckInCaller(input, source = 'manual') {
   const upperInput = (input || '').toUpperCase().trim();
   let trainingType = document.getElementById('checkinTrainingType')?.value || '';
 
-  // 1. Tự động nhận diện hình thức tập cho QR
   if (!trainingType) {
     if (source === 'qr' && /^AG\d{3,}$/i.test(upperInput)) {
       setTrainingTypeSelectValue('NonPT');
@@ -192,7 +189,6 @@ export function submitCheckInCaller(input, source = 'manual') {
     }
   }
 
-  // 2. Đồng bộ hình thức tập nếu quét sai loại mã
   if (source === 'qr' && /^AG\d{3,}$/i.test(upperInput) && trainingType !== 'NonPT') {
     setTrainingTypeSelectValue('NonPT');
     trainingType = 'NonPT';
@@ -203,7 +199,6 @@ export function submitCheckInCaller(input, source = 'manual') {
     return;
   }
 
-  // 3. Gọi API
   setButtonLoading('checkInButton', true, 'Đang xử lý...');
   showLoading('checkInNotification', 'Đang thực hiện điểm danh...');
 
@@ -220,12 +215,10 @@ export function submitCheckInCaller(input, source = 'manual') {
     .withSuccessHandler(result => {
       setButtonLoading('checkInButton', false);
       renderCheckInResult(result);
-      if (window.qrScanner && window.qrScanner.__processing) window.qrScanner.__processing = false;
     })
     .withFailureHandler(err => {
       setButtonLoading('checkInButton', false);
       showError('checkInNotification', err.message || err);
-      if (window.qrScanner && window.qrScanner.__processing) window.qrScanner.__processing = false;
     })
     .submitCheckIn(payload);
 }
@@ -244,7 +237,6 @@ function renderCheckInResult(result) {
 
   const maHV = result.maHV || result.studentId || '';
   const hoTen = result.hoTen || result.fullName || '';
-  const sdt = formatPhoneNumber(result.sdt || result.phone || '');
   const goi = result.goi || result.packageCode || '';
   const lastCheck = result.lastCheck || 'Chưa có';
   const remain = (result.remain != null) ? result.remain : '0';

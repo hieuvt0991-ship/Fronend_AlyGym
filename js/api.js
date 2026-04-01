@@ -5,10 +5,6 @@
 
 import { callAPI } from './config.js';
 
-/**
- * apiRunner mimics the behavior of google.script.run.
- * Cải tiến để hỗ trợ gọi nhiều API đồng thời mà không bị ghi đè handler.
- */
 class ApiRunner {
   constructor() {
     this._successHandler = (data) => console.log('API Success:', data);
@@ -29,70 +25,29 @@ class ApiRunner {
     return newRunner;
   }
 
-  /**
-   * Internal proxy to execute the actual API call.
-   */
   async __execute(action, params = {}) {
     try {
       const data = await callAPI(action, params);
-      if (typeof this._successHandler === 'function') {
-        this._successHandler(data);
-      }
+      if (typeof this._successHandler === 'function') this._successHandler(data);
     } catch (error) {
-      if (typeof this._failureHandler === 'function') {
-        this._failureHandler(error);
-      }
+      if (typeof this._failureHandler === 'function') this._failureHandler(error);
     }
   }
 }
 
 export const apiRunner = new ApiRunner();
 
-/**
- * List of available backend actions.
- * These are dynamically added as methods to ApiRunner prototype.
- */
 const ACTIONS = [
-  // Initial Data
-  'getInitialData',
-  
-  // Student Management
-  'registerStudent',
-  'renewStudent',
-  'getStudentForRenew',
-  'getStudentForPending',
-  'convertStudentType',
-  
-  // Check-in & Attendance
-  'submitCheckIn',
-  'getMonthCardStatus',
-  
-  // Revenue & Sales
-  'recordOtherRevenue',
-  'getDailyRevenueReport',
-  'updateRevenuePayment',
-  
-  // Pending Packages
-  'getPendingPackages',
-  'registerPendingPackage',
-  'activatePendingPackage',
-  'cancelPendingPackage',
-  'setupPendingPackageTriggers',
-  
-  // Others
-  'getPackagePromotionDetails',
-  'getPTList',
-  'getAllPackages',
-  'checkInactiveStudents',
+  'getInitialData', 'registerStudent', 'renewStudent', 'getStudentForRenew',
+  'getStudentForPending', 'convertStudentType', 'submitCheckIn', 'getMonthCardStatus',
+  'recordOtherRevenue', 'getDailyRevenueReport', 'updateRevenuePayment',
+  'getPendingPackages', 'registerPendingPackage', 'activatePendingPackage',
+  'cancelPendingPackage', 'setupPendingPackageTriggers', 'checkInactiveStudents',
   'markStudentAsContacted'
 ];
 
-// Dynamically create methods for each action on the prototype
 ACTIONS.forEach(action => {
-  ApiRunner.prototype[action] = function(params) {
-    return this.__execute(action, params);
-  };
+  ApiRunner.prototype[action] = function(params) { return this.__execute(action, params); };
 });
 
-// Export as default for easier imports if needed
 export default apiRunner;

@@ -1,6 +1,6 @@
 /**
  * @file init.js
- * @description Initialization logic for the ALY GYM management system.
+ * @description Initialization logic for the ALY GYM management system with full setup.
  */
 
 import { apiRunner } from './api.js';
@@ -17,7 +17,6 @@ import { updatePendingPackageOptions } from './pending.js';
 export function loadInitialData() {
   apiRunner
     .withSuccessHandler(({ allPackages, pt, students, promotion }) => {
-      // 1. Lưu trữ dữ liệu vào window để các module khác truy cập
       window.packages = [
         ...(Array.isArray(allPackages?.NonPT) ? allPackages.NonPT : []),
         ...(Array.isArray(allPackages?.PT) ? allPackages.PT : [])
@@ -26,12 +25,10 @@ export function loadInitialData() {
       window.__allStudentsCache = students || []; 
       window.currentPromotion = promotion;
       
-      // 2. Cập nhật giao diện các tab
       updatePackageOptions();
       updatePTOptions();
       updateRenewPackageOptions();
       updatePendingPackageOptions();
-      
       console.log('Hệ thống đã sẵn sàng với dữ liệu mới nhất.');
     })
     .withFailureHandler(err => {
@@ -42,7 +39,7 @@ export function loadInitialData() {
 }
 
 /**
- * Làm mới bộ nhớ đệm học viên (để search nhanh).
+ * Làm mới bộ nhớ đệm học viên.
  */
 export function refreshStudentCache() {
   apiRunner
@@ -55,7 +52,7 @@ export function refreshStudentCache() {
 }
 
 /**
- * Thiết lập logic cho khối thanh toán (chia tiền mặt/chuyển khoản).
+ * Thiết lập logic cho khối thanh toán.
  */
 export function setupPaymentBlock(cfg) {
   const statusEl = document.getElementById(cfg.statusId);
@@ -67,19 +64,12 @@ export function setupPaymentBlock(cfg) {
   const transferEl = cfg.transferId ? document.getElementById(cfg.transferId) : null;
   const hintEl = cfg.hintId ? document.getElementById(cfg.hintId) : null;
 
-  const getTotal = () => {
-    if (typeof cfg.getTotal === 'function') return cfg.getTotal();
-    return 0;
-  };
-
-  const clearSplit = () => {
-    if (cashEl) cashEl.value = '';
-    if (transferEl) transferEl.value = '';
-  };
+  const getTotal = () => (typeof cfg.getTotal === 'function' ? cfg.getTotal() : 0);
+  const clearSplit = () => { if (cashEl) cashEl.value = ''; if (transferEl) transferEl.value = ''; };
 
   const updateHint = () => {
     const total = getTotal();
-    const paid = parseMoney(cashEl ? cashEl.value : 0) + parseMoney(transferEl ? transferEl.value : 0);
+    const paid = parseMoney(cashEl?.value || 0) + parseMoney(transferEl?.value || 0);
     if (!hintEl) return;
     
     const debt = total - paid;
@@ -87,11 +77,7 @@ export function setupPaymentBlock(cfg) {
       hintEl.innerHTML = total > 0 ? `Còn nợ: <span class="text-red-600 font-bold">${formatMoney(total, true)}</span>` : '';
       return;
     }
-    
-    if (paid <= 0) {
-      hintEl.textContent = '';
-      return;
-    }
+    if (paid <= 0) { hintEl.textContent = ''; return; }
     
     if (debt > 0) hintEl.innerHTML = `Còn nợ: <span class="text-red-600 font-bold">${formatMoney(debt, true)}</span>`;
     else if (debt < 0) hintEl.innerHTML = `Dư: <span class="text-green-600 font-bold">${formatMoney(-debt, true)}</span>`;
@@ -99,8 +85,7 @@ export function setupPaymentBlock(cfg) {
   };
 
   const applyState = () => {
-    const status = statusEl.value;
-    if (status === 'Chưa thanh toán') {
+    if (statusEl.value === 'Chưa thanh toán') {
       methodEl.value = '';
       methodEl.disabled = true;
       if (splitEl) splitEl.classList.add('hidden');
@@ -122,15 +107,13 @@ export function setupPaymentBlock(cfg) {
   if (cashEl) cashEl.addEventListener('input', updateHint);
   if (transferEl) transferEl.addEventListener('input', updateHint);
 
-  // Lưu hàm update vào window để gọi thủ công khi cần
   const hintKey = `__update${cfg.statusId.charAt(0).toUpperCase() + cfg.statusId.slice(1)}Hint`;
   window[hintKey] = updateHint;
-
   applyState();
 }
 
 /**
- * Thiết lập xử lý radio button giảm giá
+ * Thiết lập xử lý radio button giảm giá.
  */
 function setupDiscountRadioButtons() {
   const configs = [
@@ -161,90 +144,57 @@ function setupDiscountRadioButtons() {
         }
       });
     }
-    
     if (vAmount) vAmount.addEventListener('input', () => window.recalculateTotal(cfg.mode));
     if (vPercent) vPercent.addEventListener('input', () => window.recalculateTotal(cfg.mode));
   });
 }
 
-// =================================================================
-// SYSTEM INITIALIZATION
-// =================================================================
-
 document.addEventListener('DOMContentLoaded', () => {
-  // 1. Cấu hình mặc định
   initStaffName();
   setActiveTab('checkIn');
   setupDiscountRadioButtons();
 
-  // 2. Thiết lập các khối thanh toán
   setupPaymentBlock({
-    statusId: 'paymentStatus',
-    methodId: 'paymentMethod',
-    splitId: 'registerSplit',
-    cashId: 'registerCashPaid',
-    transferId: 'registerTransferPaid',
-    hintId: 'registerDebtHint',
+    statusId: 'paymentStatus', methodId: 'paymentMethod', splitId: 'registerSplit',
+    cashId: 'registerCashPaid', transferId: 'registerTransferPaid', hintId: 'registerDebtHint',
     getTotal: () => parseMoney(document.getElementById('totalPrice')?.value || '0')
   });
 
   setupPaymentBlock({
-    statusId: 'renewPaymentStatus',
-    methodId: 'renewPaymentMethod',
-    splitId: 'renewSplit',
-    cashId: 'renewCashPaid',
-    transferId: 'renewTransferPaid',
-    hintId: 'renewDebtHint',
+    statusId: 'renewPaymentStatus', methodId: 'renewPaymentMethod', splitId: 'renewSplit',
+    cashId: 'renewCashPaid', transferId: 'renewTransferPaid', hintId: 'renewDebtHint',
     getTotal: () => parseMoney(document.getElementById('renewTotalPrice')?.value || '0')
   });
 
   setupPaymentBlock({
-    statusId: 'pendingPaymentStatus',
-    methodId: 'pendingPaymentMethod',
-    splitId: 'pendingSplit',
-    cashId: 'pendingCashPaid',
-    transferId: 'pendingTransferPaid',
-    hintId: 'pendingDebtHint',
+    statusId: 'pendingPaymentStatus', methodId: 'pendingPaymentMethod', splitId: 'pendingSplit',
+    cashId: 'pendingCashPaid', transferId: 'pendingTransferPaid', hintId: 'pendingDebtHint',
     getTotal: () => parseMoney(document.getElementById('pendingTotalPrice')?.value || '0')
   });
 
   setupPaymentBlock({
-    statusId: 'revPaymentStatus',
-    methodId: 'revPaymentMethod',
-    splitId: 'revSplit',
-    cashId: 'revCashPaid',
-    transferId: 'revTransferPaid',
-    hintId: 'revDebtHint',
+    statusId: 'revPaymentStatus', methodId: 'revPaymentMethod', splitId: 'revSplit',
+    cashId: 'revCashPaid', transferId: 'revTransferPaid', hintId: 'revDebtHint',
     getTotal: () => parseMoney(document.getElementById('revAmount')?.value || '0')
   });
 
   setupPaymentBlock({
-    statusId: 'revUpdatePaymentStatus',
-    methodId: 'revUpdatePaymentMethod',
-    splitId: 'revUpdateSplit',
-    cashId: 'revUpdateCashPaid',
-    transferId: 'revUpdateTransferPaid',
-    hintId: 'revUpdateDebtHint',
+    statusId: 'revUpdatePaymentStatus', methodId: 'revUpdatePaymentMethod', splitId: 'revUpdateSplit',
+    cashId: 'revUpdateCashPaid', transferId: 'revUpdateTransferPaid', hintId: 'revUpdateDebtHint',
     getTotal: () => 0 
   });
 
   setupPaymentBlock({
-    statusId: 'ptSinglePaymentStatus',
-    methodId: 'ptSinglePaymentMethod',
-    splitId: 'ptSinglePaymentSplit',
-    cashId: 'ptSingleCashPaid',
-    transferId: 'ptSingleTransferPaid',
-    hintId: 'ptSingleDebtHint',
+    statusId: 'ptSinglePaymentStatus', methodId: 'ptSinglePaymentMethod', splitId: 'ptSinglePaymentSplit',
+    cashId: 'ptSingleCashPaid', transferId: 'ptSingleTransferPaid', hintId: 'ptSingleDebtHint',
     getTotal: () => parseMoney(document.getElementById('ptSinglePrice')?.value || '0')
   });
 
-  // 3. Sự kiện cho tab Điểm danh
   const trainingTypeSelect = document.getElementById('checkinTrainingType');
   if (trainingTypeSelect) {
     trainingTypeSelect.addEventListener('change', () => {
-       const v = trainingTypeSelect.value || '';
        const box = document.getElementById('ptSingleSessionBox');
-       if (box) box.classList.toggle('hidden', v !== 'PT');
+       if (box) box.classList.toggle('hidden', trainingTypeSelect.value !== 'PT');
        refreshPtSinglePayEligibility();
     });
   }
@@ -257,10 +207,10 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // 4. Khởi chạy nạp dữ liệu
   loadInitialData();
 });
 
 // Global exposure
 window.refreshStudentCache = refreshStudentCache;
 window.setupPaymentBlock = setupPaymentBlock;
+window.loadInitialData = loadInitialData;

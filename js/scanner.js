@@ -1,5 +1,48 @@
 /**
  * @file scanner.js
+ * @description QR Scanner logic using html5-qrcode.
+ */
+
+import { handleManualCheckIn } from './checkin.js';
+import { showToast } from './utils.js';
+
+let html5QrCode = null;
+
+export function startQRScan() {
+  const reader = document.getElementById('reader');
+  if (!reader) return;
+
+  html5QrCode = new Html5Qrcode("reader");
+  const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+
+  html5QrCode.start(
+    { facingMode: "environment" },
+    config,
+    (decodedText) => {
+      document.getElementById('result').innerText = `Quét thành công: ${decodedText}`;
+      document.getElementById('manualInput').value = decodedText;
+      stopQRScan();
+      handleManualCheckIn();
+    },
+    (errorMessage) => { /* Ignore constant errors */ }
+  ).catch(err => {
+    console.error("Camera error:", err);
+    showToast("Không thể mở Camera. Vui lòng kiểm tra quyền truy cập!", "error");
+  });
+}
+
+export function stopQRScan() {
+  if (html5QrCode) {
+    html5QrCode.stop().then(() => {
+      document.getElementById('reader').innerHTML = '';
+      html5QrCode = null;
+    }).catch(err => console.error(err));
+  }
+}
+
+window.startQRScan = startQRScan;
+window.stopQRScan = stopQRScan;/**
+ * @file scanner.js
  * @description QR Code scanning logic using html5-qrcode.
  */
 

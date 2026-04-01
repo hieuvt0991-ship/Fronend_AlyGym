@@ -1,6 +1,6 @@
 /**
  * @file pending.js
- * @description Logic for managing pending packages (gói chờ kích hoạt).
+ * @description Logic for managing pending packages (gói chờ kích hoạt) with full global exposure.
  */
 
 import { apiRunner } from './api.js';
@@ -124,9 +124,7 @@ function renderPendingList(packages) {
  */
 export function activatePendingPackage(packageId) {
   if (!confirm('Bạn có chắc chắn muốn kích hoạt gói này ngay bây giờ không? Gói cũ (nếu có) sẽ bị đóng lại.')) return;
-  
   showLoading('pendingNotification', 'Đang kích hoạt gói chờ...');
-  
   apiRunner
     .withSuccessHandler(result => {
       if (result && result.status === 'success') {
@@ -148,9 +146,7 @@ export function activatePendingPackage(packageId) {
  */
 export function cancelPendingPackage(packageId) {
   if (!confirm('Bạn có chắc chắn muốn hủy gói chờ này không? Thao tác này không thể hoàn tác.')) return;
-  
   showLoading('pendingNotification', 'Đang hủy gói chờ...');
-  
   apiRunner
     .withSuccessHandler(result => {
       if (result && result.status === 'success') {
@@ -188,7 +184,6 @@ export function updatePendingPackageOptions() {
     opt.dataset.sessions = p.sessions;
     select.add(opt);
   });
-  
   updatePendingTotalPrice();
 }
 
@@ -233,12 +228,12 @@ export function submitPendingForm() {
     monthCardSegment: document.getElementById('pendingMonthCardSegment')?.value || 'chungCu'
   };
 
-  setButtonLoading('pendingButton', true, 'Đang đăng ký...');
+  setButtonLoading('pendingSubmitButton', true, 'Đang đăng ký...');
   showLoading('pendingNotification', 'Đang xử lý đăng ký gói chờ...');
 
   apiRunner
     .withSuccessHandler(result => {
-      setButtonLoading('pendingButton', false);
+      setButtonLoading('pendingSubmitButton', false);
       if (result && result.status === 'success') {
         showSuccess('pendingNotification', `Đã đăng ký gói chờ thành công cho ${studentId}!`);
         refreshPendingList();
@@ -247,7 +242,7 @@ export function submitPendingForm() {
       }
     })
     .withFailureHandler(err => {
-      setButtonLoading('registerButton', false);
+      setButtonLoading('pendingSubmitButton', false);
       showError('pendingNotification', err.message || err);
     })
     .registerPendingPackage(formData);
