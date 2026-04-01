@@ -1,382 +1,226 @@
 /**
  * @file renew.js
- * @description Logic for the renewal tab with full feature parity from old system.
+ * @description Logic for renewing student packages and converting student types.
  */
 
 import { apiRunner } from './api.js';
+import { formatMoney, parseMoney, setTotalWithMonthCard } from './money.js';
 import { 
-  showLoading, showError, showSuccess, formatPhoneNumber, 
-  setButtonLoading, getStaffName, setupPaymentBlock,
-  formatDDMMYYYY, escapeHtml, generatePTGroupId
+  showLoading, showError, showSuccess, getStaffName, 
+  setButtonLoading, formatPhoneNumber, escapeHtml, showToast 
 } from './utils.js';
-import { formatMoney, parseMoney } from './money.js';
-
-// State management
-let __renewSearchCtx = { isActive: false, forcePendingMode: false };
-let __renewMonthCardStatus = null;
 
 /**
- * Main search function for student renewal
+ * Tìm kiếm học viên để gia hạn.
  */
 export function searchStudentForRenew() {
-  const input = document.getElementById('searchStudentId')?.value.trim();
-  const trainingType = document.getElementById('renewTrainingType')?.value || 'NonPT'; // Get selected type
-  const infoBox = document.getElementById('renewStudentInfo');
-  const renewForm = document.getElementById('renewForm');
-  const notification = document.getElementById('renewNotification');
-  
+  const input = document.getElementById('searchStudentId')?.value?.trim();
   if (!input) {
-    showError('renewNotification', 'Vui lòng nhập mã HV, tên hoặc SĐT');
+    showToast('Vui lòng nhập mã HV, SĐT hoặc tên', 'warning');
     return;
   }
 
-  if (notification) notification.innerHTML = '';
-  showLoading('renewStudentInfo', 'Đang tìm kiếm học viên...');
-  setButtonLoading('renewSearchButton', true, 'Đang tìm...');
+  showLoading('studentInfoRenew', 'Đang tìm kiếm học viên...');
+  document.getElementById('renewForm').classList.add('hidden');
 
   apiRunner
     .withSuccessHandler(result => {
-      setButtonLoading('renewSearchButton', false);
-      if (result && (result.status === 'success' || result.status === 'eligible' || result.status === 'not_eligible')) {
-        const student = result.data || result; // Backend might return data wrapped or direct
-        
-        __renewSearchCtx = { 
-          isActive: student.remainingSessions > 0, // Fallback if isActive not present
-          forcePendingMode: student.hasPending 
-        };
-        __renewMonthCardStatus = student.monthCard || null;
-        
-        renderStudentInfo(student);
-        renewForm.classList.remove('hidden');
-        
-        // Auto-fill form based on student data
-        const studentId = student.studentId || '';
-        const isPT = studentId.startsWith('APT');
-        const trainingTypeEl = document.getElementById('renewTrainingType');
-        if (trainingTypeEl) {
-          // If search was generic, update training type to match found student
-          trainingTypeEl.value = isPT ? (student.trainingType || 'PT1:1') : 'NonPT';
-        }
-
-        // Initialize form state
-        toggleRenewSwitchPackage(); 
+      document.getElementById('studentInfoRenew').innerHTML = '';
+      if (result && result.status === 'success') {
+        renderStudentInfoRenew(result.data);
+        document.getElementById('renewForm').classList.remove('hidden');
         updateRenewPackageOptions();
-        
-        // Set default dates
-        const today = new Date();
-        const startDateEl = document.getElementById('renewStartDate');
-        if (startDateEl) {
-          let defaultStart = new Date();
-          if (student.endDate) {
-            const parts = student.endDate.split('/');
-            if (parts.length === 3) {
-              const end = new Date(parts[2], parts[1] - 1, parts[0]);
-              if (end >= today) {
-                defaultStart = new Date(end);
-                defaultStart.setDate(end.getDate() + 1);
-              }
-            }
-          }
-          startDateEl.value = defaultStart.toISOString().split('T')[0];
-        }
-
-        // Handle PT visibility
-        refreshPTFieldsVisibility();
-        
-        // Setup payment hint
-        recalculateTotal('renew');
-        
-        // If has pending or not eligible, show backend message
-        if (student.status === 'not_eligible' || student.hasPending) {
-          const warning = `<div class="bg-orange-100 text-orange-800 p-3 rounded-xl border border-orange-200 mb-3 text-xs font-bold">
-            ⚠️ ${student.message || 'Học viên đã có gói chờ kích hoạt.'}
-          </div>`;
-          infoBox.insertAdjacentHTML('afterbegin', warning);
-          
-          // Auto switch to pending mode if already has pending or not eligible for renew now
-          const pendingRadio = document.querySelector('input[name="renewMode"][value="pendingLater"]');
-          if (pendingRadio) {
-            pendingRadio.checked = true;
-            toggleRenewMode();
-          }
-        }
       } else {
-        showError('renewStudentInfo', result?.message || 'Không tìm thấy học viên.');
-        renewForm.classList.add('hidden');
+        showError('studentInfoRenew', result?.message || 'Không tìm thấy học viên.');
       }
     })
     .withFailureHandler(err => {
-      setButtonLoading('renewSearchButton', false);
-      showError('renewStudentInfo', err.message || err);
-      renewForm.classList.add('hidden');
+      showError('studentInfoRenew', err.message || err);
     })
-    .getStudentForRenew({ studentId: input, trainingType: trainingType }); // Pass trainingType to backend
+    .getStudentForRenew({ studentId: input });
 }
 
-function renderStudentInfo(student) {
-  const box = document.getElementById('renewStudentInfo');
-  const isActive = student.isActive;
-  const statusColor = isActive ? 'green' : 'red';
-  const statusText = isActive ? 'ĐANG HOẠT ĐỘNG' : 'HẾT HẠN / NGỪNG';
+/**
+ * Hiển thị thông tin học viên tìm thấy.
+ */
+function renderStudentInfoRenew(student) {
+  const box = document.getElementById('studentInfoRenew');
+  const isApt = (student.studentId || '').startsWith('APT');
+  const statusClass = student.status === 'Hết hạn' ? 'text-red-600' : 'text-green-600';
   
   box.innerHTML = `
-    <div class="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm space-y-3">
-      <div class="flex justify-between items-start">
-        <div class="flex items-center gap-3">
-          <div class="bg-blue-100 text-blue-600 w-10 h-10 rounded-full flex items-center justify-center font-black">${student.fullName.charAt(0)}</div>
-          <div>
-            <div class="font-black text-gray-800 text-lg leading-tight">${escapeHtml(student.fullName)}</div>
-            <div class="text-[10px] font-bold text-blue-500 uppercase tracking-widest">${student.studentId} • ${formatPhoneNumber(student.phone)}</div>
-          </div>
+    <div class="bg-blue-50 p-4 rounded-xl border border-blue-100 flex flex-col md:flex-row justify-between gap-4 animate-in fade-in duration-300">
+      <div class="space-y-1">
+        <div class="flex items-center gap-2">
+          <span class="text-xs font-black text-blue-900 uppercase">${escapeHtml(student.fullName)}</span>
+          <span class="px-2 py-0.5 rounded-full bg-blue-600 text-white text-[9px] font-bold tracking-tighter">${student.studentId}</span>
         </div>
-        <div class="px-3 py-1 rounded-full bg-${statusColor}-100 text-${statusColor}-700 text-[10px] font-black uppercase">${statusText}</div>
+        <div class="text-[10px] text-gray-600 font-bold">
+          <i class="fas fa-phone-alt mr-1"></i> ${formatPhoneNumber(student.phone)}
+          <span class="mx-2">|</span>
+          <i class="fas fa-box mr-1"></i> ${escapeHtml(student.currentPackage)}
+        </div>
       </div>
-      
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-3 pt-3 border-t border-dashed">
-        <div class="space-y-0.5">
-          <div class="text-[9px] font-bold text-gray-400 uppercase">Gói hiện tại</div>
-          <div class="text-xs font-black text-gray-700 truncate">${student.packageCode || 'N/A'}</div>
-        </div>
-        <div class="space-y-0.5">
-          <div class="text-[9px] font-bold text-gray-400 uppercase">Hạn dùng</div>
-          <div class="text-xs font-black text-gray-700">${student.endDate || 'N/A'}</div>
-        </div>
-        <div class="space-y-0.5">
-          <div class="text-[9px] font-bold text-gray-400 uppercase">Còn lại</div>
-          <div class="text-xs font-black text-orange-600">${student.remainingSessions || 0} buổi</div>
-        </div>
-        <div class="space-y-0.5">
-          <div class="text-[9px] font-bold text-gray-400 uppercase">Thẻ tháng</div>
-          <div class="text-xs font-black ${student.monthCard?.isActive ? 'text-green-600' : 'text-gray-400'}">
-            ${student.monthCard?.isActive ? 'CÒN HẠN' : (student.monthCard?.exists ? 'HẾT HẠN' : 'KHÔNG CÓ')}
-          </div>
-        </div>
+      <div class="flex flex-col md:items-end justify-center">
+        <div class="text-[10px] font-black uppercase tracking-widest ${statusClass}">${student.status}</div>
+        <div class="text-[10px] font-bold text-gray-500 italic">Còn lại: ${student.remainSessions} buổi</div>
+      </div>
+    </div>
+    
+    <div class="mt-4 flex flex-wrap gap-2">
+      <button onclick="toggleConvertStudentType()" class="bg-orange-100 hover:bg-orange-200 text-orange-700 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all">
+        <i class="fas fa-exchange-alt mr-1"></i> Chuyển đổi loại thẻ (${isApt ? 'Sang Gym' : 'Sang PT'})
+      </button>
+    </div>
+    <div id="convertSection" class="hidden mt-3 p-3 bg-orange-50 rounded-xl border border-orange-200 animate-in slide-in-from-top-2">
+      <div class="text-[10px] font-black text-orange-800 uppercase mb-2">Chuyển đổi loại thẻ</div>
+      <div class="grid grid-cols-1 gap-2">
+        <div class="text-[10px] text-orange-700 italic">Hệ thống sẽ tạo mã mới và bảo lưu buổi tập cũ sang gói mới.</div>
+        <button onclick="submitConvertStudentType('${student.studentId}')" id="convertButton" class="w-full bg-orange-600 text-white py-2 rounded-lg font-black text-[10px] uppercase shadow-sm">Xác nhận chuyển đổi</button>
       </div>
     </div>
   `;
 }
 
+/**
+ * Hiển thị/ẩn phần chuyển đổi loại thẻ.
+ */
+export function toggleConvertStudentType() {
+  const sec = document.getElementById('convertSection');
+  if (sec) sec.classList.toggle('hidden');
+}
+
+/**
+ * Gửi yêu cầu chuyển đổi loại thẻ.
+ */
+export function submitConvertStudentType(studentId) {
+  if (!confirm('Bạn có chắc chắn muốn chuyển đổi loại thẻ cho học viên này không?')) return;
+  
+  setButtonLoading('convertButton', true, 'Đang xử lý...');
+  
+  apiRunner
+    .withSuccessHandler(result => {
+      setButtonLoading('convertButton', false);
+      if (result && result.status === 'success') {
+        showToast(`Chuyển đổi thành công! Mã mới: ${result.data.newStudentId}`, 'success');
+        document.getElementById('searchStudentId').value = result.data.newStudentId;
+        searchStudentForRenew();
+      } else {
+        showToast(result?.message || 'Lỗi chuyển đổi', 'error');
+      }
+    })
+    .withFailureHandler(err => {
+      setButtonLoading('convertButton', false);
+      showToast(err.message || err, 'error');
+    })
+    .convertStudentType({ studentId, staff: getStaffName() });
+}
+
+/**
+ * Cập nhật danh sách gói tập cho gia hạn.
+ */
 export function updateRenewPackageOptions() {
+  const input = document.getElementById('searchStudentId')?.value || '';
+  const isApt = input.startsWith('APT');
   const select = document.getElementById('renewPackageCode');
   if (!select) return;
-  
-  const type = document.getElementById('renewTrainingType')?.value || 'NonPT';
-  const switchPkg = document.getElementById('renewSwitchPackageToggle')?.checked;
-  
-  select.innerHTML = '';
+
+  const onlyCard = document.getElementById('renewMonthCardOnly')?.checked;
+  const pkgRow = document.getElementById('renewPackageRow');
+  if (pkgRow) pkgRow.classList.toggle('hidden', onlyCard);
+
+  select.innerHTML = '<option value="">-- Chọn gói gia hạn --</option>';
   const pkgList = Array.isArray(window.packages) ? window.packages : [];
   
-  let filtered = [];
-  if (type === 'NonPT') {
-    filtered = pkgList.filter(p => p.type === 'Gym_NonPT');
-  } else {
-    // Filter PT packages by subtype (1:1, 2:1, 3:1)
-    filtered = pkgList.filter(p => p.type === 'Gym_PT' && p.code.startsWith(type + ':'));
-    // Fallback if startsWith fails
-    if (filtered.length === 0) {
-      filtered = pkgList.filter(p => p.type === 'Gym_PT');
-    }
-  }
+  const filtered = isApt 
+    ? pkgList.filter(p => p.type === 'Gym_PT')
+    : pkgList.filter(p => p.type === 'Gym_NonPT');
 
   filtered.forEach(p => {
-    const opt = new Option(`${p.code} - ${p.sessions} buổi - ${formatMoney(p.price, true)}`, p.code);
+    const opt = new Option(`${p.code} - ${p.sessions} b - ${formatMoney(p.price, true)}`, p.code);
     opt.dataset.price = p.price;
     opt.dataset.sessions = p.sessions;
     select.add(opt);
   });
   
-  refreshPTFieldsVisibility();
-  recalculateTotal('renew');
+  updateRenewTotalPrice();
 }
 
-export function toggleRenewSwitchPackage() {
-  const switchPkg = document.getElementById('renewSwitchPackageToggle')?.checked;
-  const typeContainer = document.getElementById('renewTrainingTypeContainer');
-  const typeSelect = document.getElementById('renewTrainingType');
-  
-  if (typeContainer) typeContainer.classList.toggle('hidden', !switchPkg);
-  if (typeSelect) typeSelect.disabled = !switchPkg;
-  
-  updateRenewPackageOptions();
-  updateConvertButtons();
-}
-
-export function toggleRenewMonthCardOnly() {
+/**
+ * Cập nhật tổng tiền gia hạn.
+ */
+export function updateRenewTotalPrice() {
   const onlyCard = document.getElementById('renewMonthCardOnly')?.checked;
-  const pkgCode = document.getElementById('renewPackageCode');
-  const ptRow = document.getElementById('renewPtRow');
-  const issueCard = document.getElementById('renewIssueMonthCard');
-  const monthExtra = document.getElementById('renewMonthCardExtra');
-  
-  if (pkgCode) pkgCode.disabled = onlyCard;
-  if (ptRow && onlyCard) ptRow.classList.add('hidden');
-  if (issueCard) {
-    issueCard.checked = onlyCard;
-    issueCard.disabled = onlyCard;
+  let pkgPrice = 0;
+  if (!onlyCard) {
+    const select = document.getElementById('renewPackageCode');
+    pkgPrice = Number(select?.selectedOptions[0]?.dataset.price || 0);
   }
-  if (monthExtra) monthExtra.classList.toggle('hidden', !onlyCard);
-  
-  recalculateTotal('renew');
+  setTotalWithMonthCard(pkgPrice, 'renew');
 }
 
-export function toggleRenewMode() {
-  const mode = document.querySelector('input[name="renewMode"]:checked')?.value;
-  const label = document.getElementById('renewDateLabel');
-  const btn = document.getElementById('submitBtn');
-  
-  if (label) label.textContent = mode === 'pendingLater' ? 'Ngày kích hoạt dự kiến' : 'Ngày bắt đầu';
-  if (btn) btn.textContent = mode === 'pendingLater' ? '✅ ĐĂNG KÝ GÓI CHỜ' : '✅ XÁC NHẬN GIA HẠN';
-}
-
-function refreshPTFieldsVisibility() {
-  const type = document.getElementById('renewTrainingType')?.value || '';
-  const ptRow = document.getElementById('renewPtRow');
-  const isPT = type.startsWith('PT');
+/**
+ * Gửi form gia hạn.
+ */
+export function submitRenewForm() {
+  const studentId = document.getElementById('searchStudentId')?.value?.trim();
   const onlyCard = document.getElementById('renewMonthCardOnly')?.checked;
-  
-  if (ptRow) ptRow.classList.toggle('hidden', !isPT || onlyCard);
-}
-
-function updateConvertButtons() {
-  const studentId = document.getElementById('searchStudentId')?.value || '';
-  const type = document.getElementById('renewTrainingType')?.value || '';
-  const switchPkg = document.getElementById('renewSwitchPackageToggle')?.checked;
-  const btnNonPT = document.getElementById('convertToNonPTBtn');
-  const btnPT = document.getElementById('convertToPTBtn');
-  
-  const isAPT = studentId.startsWith('APT');
-  const isAG = studentId.startsWith('AG');
-  
-  if (btnNonPT) btnNonPT.classList.toggle('hidden', !(switchPkg && isAPT && type === 'NonPT'));
-  if (btnPT) btnPT.classList.toggle('hidden', !(switchPkg && isAG && type.startsWith('PT')));
-}
-
-export function confirmAndRenew() {
   const packageCode = document.getElementById('renewPackageCode')?.value;
   const startDate = document.getElementById('renewStartDate')?.value;
-  const onlyCard = document.getElementById('renewMonthCardOnly')?.checked;
-  const mode = document.querySelector('input[name="renewMode"]:checked')?.value;
-  
-  if (!onlyCard && !packageCode) {
-    showError('renewNotification', 'Vui lòng chọn gói tập');
-    return;
-  }
-  if (!startDate) {
-    showError('renewNotification', 'Vui lòng chọn ngày bắt đầu');
+
+  if (!studentId || (!onlyCard && !packageCode) || !startDate) {
+    showToast('Vui lòng điền đầy đủ thông tin gia hạn!', 'warning');
     return;
   }
 
-  const msg = mode === 'pendingLater' ? 'Bạn chắc chắn muốn đăng ký gói chờ?' : 'Bạn chắc chắn muốn gia hạn?';
-  if (!confirm(msg)) return;
+  const pkgSelect = document.getElementById('renewPackageCode');
+  const selectedPkg = pkgSelect?.selectedOptions[0];
 
-  setButtonLoading('submitBtn', true, 'Đang xử lý...');
-  showLoading('renewNotification', 'Đang gửi yêu cầu...');
-  
-  const studentId = document.getElementById('searchStudentId').value;
-  const type = document.getElementById('renewTrainingType').value;
-
-  const data = {
-    studentId: studentId,
+  const formData = {
+    studentId,
+    onlyMonthCard: onlyCard,
     packageCode: onlyCard ? 'MONTH_CARD_ONLY' : packageCode,
+    sessions: onlyCard ? 0 : (selectedPkg?.dataset.sessions || 0),
+    price: onlyCard ? 0 : (selectedPkg?.dataset.price || 0),
     startDate,
-    mode, // 'renewNow' or 'pendingLater'
-    staff: getStaffName(),
-    paymentStatus: document.getElementById('renewPaymentStatus').value,
-    paymentMethod: document.getElementById('renewPaymentMethod').value,
+    paymentStatus: document.getElementById('renewPaymentStatus')?.value || 'Đã thanh toán',
+    paymentMethod: document.getElementById('renewPaymentMethod')?.value || 'Tiền mặt',
     cashPaid: parseMoney(document.getElementById('renewCashPaid')?.value || '0'),
     transferPaid: parseMoney(document.getElementById('renewTransferPaid')?.value || '0'),
-    discountAmount: parseMoney(document.getElementById('renewDiscountAmount').value || '0'),
-    discountPercent: parseFloat(document.getElementById('renewDiscountPercent').value || '0'),
-    issueMonthCard: document.getElementById('renewIssueMonthCard').checked,
-    monthCardSegment: document.getElementById('renewMonthCardSegment')?.value || 'chungCu',
-    ptCode: type.startsWith('PT') ? document.getElementById('renewPtCode')?.value : '',
-    ptGroupId: type.startsWith('PT') ? document.getElementById('renewPtGroupId')?.value : '',
-    notes: document.getElementById('renewNotes')?.value || ''
+    staff: getStaffName(),
+    notes: document.getElementById('renewNotes')?.value || '',
+    issueMonthCard: document.getElementById('renewIssueMonthCard')?.checked || false,
+    monthCardSegment: document.getElementById('renewMonthCardSegment')?.value || 'chungCu'
   };
 
-  const action = mode === 'pendingLater' ? 'registerPendingPackage' : 'renewStudent';
+  setButtonLoading('renewButton', true, 'Đang gia hạn...');
+  showLoading('renewNotification', 'Đang xử lý gia hạn...');
 
   apiRunner
     .withSuccessHandler(result => {
-      setButtonLoading('submitBtn', false);
+      setButtonLoading('renewButton', false);
       if (result && result.status === 'success') {
-        showSuccess('renewNotification', `${mode === 'pendingLater' ? 'Đăng ký gói chờ' : 'Gia hạn'} thành công cho học viên ${result.fullName}!`);
-        // Refresh cache and search again to show updated info
+        showSuccess('renewNotification', `Gia hạn thành công cho học viên ${studentId}!`);
+        // Reset form và load lại thông tin học viên
+        document.getElementById('renewForm').classList.add('hidden');
+        searchStudentForRenew();
+        // Làm mới cache học viên
         if (typeof window.refreshStudentCache === 'function') window.refreshStudentCache();
-        setTimeout(() => searchStudentForRenew(), 1500);
       } else {
         showError('renewNotification', result?.message || 'Có lỗi xảy ra.');
       }
     })
     .withFailureHandler(err => {
-      setButtonLoading('submitBtn', false);
+      setButtonLoading('renewButton', false);
       showError('renewNotification', err.message || err);
-    })[action](data);
+    })
+    .renewStudent(formData);
 }
-
-// Convert Functions
-export function convertToNonPT() {
-  const studentId = document.getElementById('searchStudentId')?.value;
-  if (!confirm(`Bạn chắc chắn muốn chuyển học viên ${studentId} sang Tự tập (AG)?`)) return;
-  
-  setButtonLoading('convertToNonPTBtn', true, 'Đang chuyển...');
-  apiRunner
-    .withSuccessHandler(result => {
-      setButtonLoading('convertToNonPTBtn', false);
-      if (result.status === 'success') {
-        showSuccess('renewNotification', `Chuyển đổi thành công! Mã mới: ${result.newStudentId}`);
-        document.getElementById('searchStudentId').value = result.newStudentId;
-        searchStudentForRenew();
-      } else showError('renewNotification', result.message);
-    })
-    .withFailureHandler(err => {
-      setButtonLoading('convertToNonPTBtn', false);
-      showError('renewNotification', err.message);
-    })
-    .convertStudentType({ studentId, targetType: 'NonPT' });
-}
-
-export function convertToPT() {
-  const studentId = document.getElementById('searchStudentId')?.value;
-  if (!confirm(`Bạn chắc chắn muốn chuyển học viên ${studentId} sang PT (APT)?`)) return;
-  
-  setButtonLoading('convertToPTBtn', true, 'Đang chuyển...');
-  apiRunner
-    .withSuccessHandler(result => {
-      setButtonLoading('convertToPTBtn', false);
-      if (result.status === 'success') {
-        showSuccess('renewNotification', `Chuyển đổi thành công! Mã mới: ${result.newStudentId}`);
-        document.getElementById('searchStudentId').value = result.newStudentId;
-        searchStudentForRenew();
-      } else showError('renewNotification', result.message);
-    })
-    .withFailureHandler(err => {
-      setButtonLoading('convertToPTBtn', false);
-      showError('renewNotification', err.message);
-    })
-    .convertStudentType({ studentId, targetType: 'PT' });
-}
-
-// Initialize Payment Logic
-setupPaymentBlock({
-  statusId: 'renewPaymentStatus',
-  methodId: 'renewPaymentMethod',
-  splitId: 'renewPaymentSplit',
-  cashId: 'renewCashPaid',
-  transferId: 'renewTransferPaid',
-  hintId: 'renewDebtHint',
-  getTotal: () => parseMoney(document.getElementById('renewTotalPrice')?.value || '0'),
-  onInit: (update) => {
-    window.__updateRenewPaymentHint = update;
-  }
-});
 
 // Global exposure
 window.searchStudentForRenew = searchStudentForRenew;
 window.updateRenewPackageOptions = updateRenewPackageOptions;
-window.confirmAndRenew = confirmAndRenew;
-window.toggleRenewSwitchPackage = toggleRenewSwitchPackage;
-window.toggleRenewMonthCardOnly = toggleRenewMonthCardOnly;
-window.toggleRenewMode = toggleRenewMode;
-window.convertToNonPT = convertToNonPT;
-window.convertToPT = convertToPT;
+window.updateRenewTotalPrice = updateRenewTotalPrice;
+window.submitRenewForm = submitRenewForm;
+window.toggleConvertStudentType = toggleConvertStudentType;
+window.submitConvertStudentType = submitConvertStudentType;

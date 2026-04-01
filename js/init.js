@@ -1,86 +1,177 @@
 /**
  * @file init.js
- * @description Main entry point for the ALY GYM frontend.
+ * @description Initialization logic for the ALY GYM management system.
  */
 
 import { apiRunner } from './api.js';
-import { setActiveTab, initStaffName } from './utils.js';
-import './register.js';
-import './checkin.js';
-import './scanner.js';
-import './renew.js';
-import './revenue.js';
-import './alert.js';
+import { setActiveTab, initStaffName, showToast } from './utils.js';
+import { refreshPtSinglePayEligibility } from './checkin.js';
+import { updatePackageOptions, updatePTOptions, togglePTFields } from './register.js';
+import { updateRenewPackageOptions } from './renew.js';
+import { updatePendingPackageOptions } from './pending.js';
 
+/**
+ * Tải dữ liệu ban đầu từ server (gói tập, PT, học viên, khuyến mãi).
+ */
 export function loadInitialData() {
   apiRunner
     .withSuccessHandler(({ allPackages, pt, students, promotion }) => {
+      // 1. Lưu trữ dữ liệu vào window để các module khác truy cập
       window.packages = [
         ...(Array.isArray(allPackages?.NonPT) ? allPackages.NonPT : []),
         ...(Array.isArray(allPackages?.PT) ? allPackages.PT : [])
       ];
-      window.ptList = pt;
+      window.ptList = pt || [];
       window.__allStudentsCache = students || []; 
       window.currentPromotion = promotion;
       
-      // Call UI updates
-      if (typeof window.updatePackageOptions === 'function') window.updatePackageOptions();
-      if (typeof window.updatePTOptions === 'function') window.updatePTOptions();
-      if (typeof window.updateRenewPackageOptions === 'function') window.updateRenewPackageOptions();
-      if (typeof window.updatePendingPackageOptions === 'function') window.updatePendingPackageOptions();
+      // 2. Cập nhật giao diện các tab
+      updatePackageOptions();
+      updatePTOptions();
+      updateRenewPackageOptions();
+      updatePendingPackageOptions();
+      
+      console.log('Hệ thống đã sẵn sàng với dữ liệu mới nhất.');
     })
-    .withFailureHandler(err => console.error('Lỗi tải dữ liệu ban đầu:', err))
+    .withFailureHandler(err => {
+      console.error('Lỗi tải dữ liệu ban đầu:', err);
+      showToast('Không thể tải dữ liệu từ server. Vui lòng thử lại!', 'error');
+    })
     .getInitialData();
 }
 
-// Initialization
+/**
+ * Làm mới bộ nhớ đệm học viên (để search nhanh).
+ */
+export function refreshStudentCache() {
+  apiRunner
+    .withSuccessHandler(({ students }) => {
+      window.__allStudentsCache = students || [];
+      console.log('Bộ nhớ đệm học viên đã được cập nhật.');
+    })
+    .withFailureHandler(err => console.error('Lỗi làm mới cache học viên:', err))
+    .getInitialData(); 
+}
+
+/**
+ * Thiết lập logic cho khối thanh toán (chia tiền mặt/chuyển khoản).
+ */
+export function setupPaymentBlock({ statusId, methodId, splitId, cashId, transferId, hintId, getTotal }) {
+  const statusEl = document.getElementById(statusId);
+  const methodEl = document.getElementById(methodId);
+  const splitEl = document.getElementById(splitId);
+  const cashEl = document.getElementById(cashId);
+  const transferEl = document.getElementById(transferId);
+
+  const update = () => {
+    const status = statusEl?.value;
+    const method = methodEl?.value;
+    const isSplit = method === 'Tiền mặt + Chuyển khoản';
+    
+    if (splitEl) splitEl.classList.toggle('hidden', !isSplit);
+    
+    // Logic gợi ý công nợ (Debt Hint)
+    if (hintId && typeof getTotal === 'function') {
+      const hintEl = document.getElementById(hintId);
+      if (hintEl) {
+        if (status === 'Thanh toán một phần' || status === 'Chưa thanh toán') {
+          const total = getTotal();
+          const paid = isSplit ? (parseMoney(cashEl.value) + parseMoney(transferEl.value)) : 0;
+          const debt = Math.max(0, total - paid);
+          hintEl.innerHTML = `<i class="fas fa-exclamation-circle mr-1"></i> Ghi nợ: <span class="font-black text-red-600">${formatMoney(debt, true)}</span>`;
+          hintEl.classList.remove('hidden');
+        } else {
+          hintEl.classList.add('hidden');
+        }
+      }
+    }
+  };
+
+  [statusEl, methodEl].forEach(el => el?.addEventListener('change', update));
+  [cashEl, transferEl].forEach(el => el?.addEventListener('input', update));
+  
+  // Lưu hàm update vào window để gọi thủ công khi cần
+  const hintKey = `__update${statusId.charAt(0).toUpperCase() + statusId.slice(1)}Hint`;
+  window[hintKey] = update;
+}
+
+// =================================================================
+// SYSTEM INITIALIZATION
+// =================================================================
+
 document.addEventListener('DOMContentLoaded', () => {
+  // 1. Cấu hình mặc định
   initStaffName();
-  loadInitialData();
   setActiveTab('checkIn');
 
-  // Setup Payment Blocks
+  // 2. Thiết lập các khối thanh toán
   setupPaymentBlock({
     statusId: 'paymentStatus',
     methodId: 'paymentMethod',
-    splitId: 'registerPaymentSplit',
+    splitId: 'registerSplit',
     cashId: 'registerCashPaid',
     transferId: 'registerTransferPaid',
     hintId: 'registerDebtHint',
-    getTotal: () => window.parseMoney(document.getElementById('totalPrice')?.value || '0')
+    getTotal: () => parseMoney(document.getElementById('totalPrice')?.value || '0')
   });
 
   setupPaymentBlock({
     statusId: 'renewPaymentStatus',
     methodId: 'renewPaymentMethod',
-    splitId: 'renewPaymentSplit',
+    splitId: 'renewSplit',
     cashId: 'renewCashPaid',
     transferId: 'renewTransferPaid',
     hintId: 'renewDebtHint',
-    getTotal: () => window.parseMoney(document.getElementById('renewTotalPrice')?.value || '0')
+    getTotal: () => parseMoney(document.getElementById('renewTotalPrice')?.value || '0')
   });
 
   setupPaymentBlock({
     statusId: 'pendingPaymentStatus',
     methodId: 'pendingPaymentMethod',
-    splitId: 'pendingPaymentSplit',
+    splitId: 'pendingSplit',
     cashId: 'pendingCashPaid',
     transferId: 'pendingTransferPaid',
     hintId: 'pendingDebtHint',
-    getTotal: () => window.parseMoney(document.getElementById('pendingTotalPrice')?.value || '0')
+    getTotal: () => parseMoney(document.getElementById('pendingTotalPrice')?.value || '0')
   });
 
   setupPaymentBlock({
     statusId: 'revPaymentStatus',
     methodId: 'revPaymentMethod',
-    splitId: 'revPaymentSplit',
+    splitId: 'revSplit',
     cashId: 'revCashPaid',
     transferId: 'revTransferPaid',
     hintId: 'revDebtHint',
-    getTotal: () => {
-      const q = Number(document.getElementById('revQuantity')?.value || 0);
-      const p = window.parseMoney(document.getElementById('revPrice')?.value || '0');
-      return q * p;
-    }
+    getTotal: () => parseMoney(document.getElementById('revAmount')?.value || '0')
   });
+
+  setupPaymentBlock({
+    statusId: 'revUpdatePaymentStatus',
+    methodId: 'revUpdatePaymentMethod',
+    splitId: 'revUpdateSplit',
+    cashId: 'revUpdateCashPaid',
+    transferId: 'revUpdateTransferPaid',
+    hintId: 'revUpdateDebtHint',
+    getTotal: () => 0 // Update revenue doesn't have a dynamic total on UI
+  });
+
+  // 3. Sự kiện cho tab Điểm danh
+  const trainingTypeSelect = document.getElementById('checkinTrainingType');
+  if (trainingTypeSelect) {
+    trainingTypeSelect.addEventListener('change', refreshPtSinglePayEligibility);
+  }
+
+  const ptSingleChk = document.getElementById('ptPayPerSession');
+  if (ptSingleChk) {
+    ptSingleChk.addEventListener('change', (e) => {
+      const box = document.getElementById('ptSinglePriceBox');
+      if (box) box.classList.toggle('hidden', !e.target.checked);
+    });
+  }
+
+  // 4. Khởi chạy nạp dữ liệu
+  loadInitialData();
 });
+
+// Global exposure
+window.refreshStudentCache = refreshStudentCache;

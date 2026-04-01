@@ -36,9 +36,9 @@ export async function callAPI(action, params = {}) {
     }
   } catch (error) {
     console.error(`API Call failed (${action}):`, error);
-    // Có thể thêm toast thông báo lỗi ở đây
-    if (window.showErrorNotification) {
-        window.showErrorNotification(error.message);
+    // Hiển thị toast lỗi thông qua window.showErrorNotification (được định nghĩa trong utils.js)
+    if (typeof window.showErrorNotification === 'function') {
+      window.showErrorNotification(error.message || 'Lỗi kết nối server');
     }
     throw error;
   }

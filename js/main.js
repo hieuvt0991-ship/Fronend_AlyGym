@@ -1,6 +1,6 @@
 /**
  * @file main.js
- * @description Main entry point that orchestrates all modules for ALY GYM.
+ * @description Main entry point for ALY GYM frontend.
  */
 
 import './config.js';
@@ -16,4 +16,4 @@ import './revenue.js';
 import './alert.js';
 import './init.js';
 
-console.log('ALY GYM Management System Initialized');
+console.log('ALY GYM Management System Initialized successfully.');

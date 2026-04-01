@@ -1,24 +1,60 @@
 /**
  * @file utils.js
- * @description Shared utility functions for the ALY GYM frontend.
+ * @description Shared utility functions for UI, formatting, and the toast notification system.
  */
 
-// UI Helper Functions
-export function initStaffName() {
-  const el = document.getElementById('staffName');
-  if (!el) return;
+// =================================================================
+// TOAST NOTIFICATION SYSTEM
+// =================================================================
+
+/**
+ * Hiển thị thông báo Toast.
+ * @param {string} message - Nội dung thông báo.
+ * @param {string} type - Loại thông báo: 'success', 'error', 'info', 'warning'.
+ */
+export function showToast(message, type = 'info') {
+  const container = document.getElementById('toastContainer');
+  if (!container) return;
+
+  const toast = document.createElement('div');
+  toast.className = `toast toast-${type}`;
   
-  const stored = localStorage.getItem('aly_staff');
-  if (stored) el.value = stored;
+  // Icon mapping
+  const icons = {
+    success: 'fa-check-circle',
+    error: 'fa-times-circle',
+    warning: 'fa-exclamation-triangle',
+    info: 'fa-info-circle'
+  };
 
-  el.addEventListener('change', () => {
-    localStorage.setItem('aly_staff', el.value.trim());
-  });
+  toast.innerHTML = `
+    <div class="flex items-center gap-3">
+      <i class="fas ${icons[type] || icons.info} text-lg"></i>
+      <div class="flex-grow font-bold">${message}</div>
+      <button onclick="this.parentElement.parentElement.remove()" class="text-white opacity-50 hover:opacity-100 transition-opacity">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+  `;
+
+  container.appendChild(toast);
+
+  // Tự động xóa sau 4 giây
+  setTimeout(() => {
+    if (toast.parentElement) {
+      toast.style.animation = 'fadeOut 0.5s ease-out forwards';
+      setTimeout(() => toast.remove(), 500);
+    }
+  }, 4000);
 }
 
-export function getStaffName() {
-  return document.getElementById('staffName')?.value.trim() || 'Lễ tân';
-}
+// Global exposure for callAPI or other non-module scripts
+window.showErrorNotification = (msg) => showToast(msg, 'error');
+window.showSuccessNotification = (msg) => showToast(msg, 'success');
+
+// =================================================================
+// UI HELPERS (Loading, Tabs, Buttons)
+// =================================================================
 
 export function setButtonLoading(buttonId, isLoading, loadingText = 'Đang xử lý...') {
   const btn = document.getElementById(buttonId);
@@ -36,20 +72,22 @@ export function setButtonLoading(buttonId, isLoading, loadingText = 'Đang xử 
   }
 }
 
-export function showLoading(elementId, message = 'Đang xử lý...') {
+export function showLoading(elementId, message = 'Đang tải...') {
   const element = document.getElementById(elementId);
   if (element) {
-    element.innerHTML = `<div class="bg-yellow-100 text-yellow-800 p-3 rounded flex items-center gap-2">
-      <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-yellow-600"></div>
-      ${message}
-    </div>`;
+    element.innerHTML = `
+      <div class="bg-blue-50 text-blue-800 p-4 rounded-xl border border-blue-200 flex items-center justify-center gap-3 italic text-sm animate-pulse">
+        <i class="fas fa-circle-notch fa-spin"></i>
+        ${message}
+      </div>
+    `;
   }
 }
 
 export function showSuccess(elementId, message) {
   const element = document.getElementById(elementId);
   if (element) {
-    element.innerHTML = `<div class="bg-green-100 text-green-800 p-3 rounded border border-green-300">✅ ${message}</div>`;
+    element.innerHTML = `<div class="bg-green-100 text-green-800 p-4 rounded-xl border border-green-300 font-bold">✅ ${message}</div>`;
   }
   showToast(message, 'success');
 }
@@ -57,51 +95,69 @@ export function showSuccess(elementId, message) {
 export function showError(elementId, message) {
   const element = document.getElementById(elementId);
   if (element) {
-    element.innerHTML = `<div class="bg-red-100 text-red-800 p-3 rounded border border-red-300">❌ ${message}</div>`;
+    element.innerHTML = `<div class="bg-red-100 text-red-800 p-4 rounded-xl border border-red-300 font-bold">❌ ${message}</div>`;
   }
   showToast(message, 'error');
 }
 
-// Toast System
-export function showToast(message, type = 'info') {
-  const container = document.getElementById('toastContainer');
-  if (!container) return;
+export function setActiveTab(tabId) {
+  // 1. Hide all tab contents
+  document.querySelectorAll('.tab-content').forEach(tab => {
+    tab.style.display = 'none';
+    tab.classList.remove('active');
+  });
+  
+  // 2. Show the selected tab content
+  const targetTab = document.getElementById(tabId + 'Tab');
+  if (targetTab) {
+    targetTab.style.display = 'block';
+    targetTab.classList.add('active');
+  }
 
-  const toast = document.createElement('div');
-  toast.className = `toast toast-${type}`;
-  toast.innerHTML = `
-    <div class="flex items-center gap-2">
-      <i class="fas ${type === 'success' ? 'fa-check-circle' : (type === 'error' ? 'fa-times-circle' : 'fa-info-circle')}"></i>
-      <span>${message}</span>
-    </div>
-  `;
+  // 3. Update navigation button styles
+  document.querySelectorAll('.tabs button').forEach(btn => {
+    btn.classList.remove('bg-blue-700', 'text-white', 'shadow-sm');
+    btn.classList.add('bg-gray-200', 'text-gray-800', 'hover:bg-gray-300');
+  });
+  
+  // 4. Highlight the active button
+  const buttons = document.querySelectorAll('.tabs button');
+  buttons.forEach(btn => {
+    const onclickStr = btn.getAttribute('onclick') || '';
+    if (onclickStr.includes(`setActiveTab('${tabId}')`)) {
+      btn.classList.remove('bg-gray-200', 'text-gray-800', 'hover:bg-gray-300');
+      btn.classList.add('bg-blue-700', 'text-white', 'shadow-sm');
+    }
+  });
 
-  container.appendChild(toast);
-
-  // Auto remove
-  setTimeout(() => {
-    toast.style.animation = 'fadeOut 0.5s ease-out forwards';
-    setTimeout(() => toast.remove(), 500);
-  }, 4000);
+  // 5. Trigger tab-specific initialization
+  if (tabId === 'alert' && typeof window.loadInactiveStudents === 'function') {
+    window.loadInactiveStudents();
+  }
+  if (tabId === 'revenue' && typeof window.refreshDailyReport === 'function') {
+    window.refreshDailyReport();
+  }
 }
 
-// Global exposure for callAPI
-window.showErrorNotification = (msg) => showToast(msg, 'error');
-window.showSuccessNotification = (msg) => showToast(msg, 'success');
+export function initStaffName() {
+  const el = document.getElementById('staffName');
+  if (!el) return;
+  const stored = localStorage.getItem('aly_staff');
+  if (stored) el.value = stored;
+  el.addEventListener('change', () => localStorage.setItem('aly_staff', el.value.trim()));
+}
 
-// Validation & Formatting
+export function getStaffName() {
+  return document.getElementById('staffName')?.value.trim() || 'Lễ tân';
+}
+
+// =================================================================
+// FORMATTING & VALIDATION
+// =================================================================
+
 export function validatePhone(phone) {
   const phoneRegex = /^[0-9]{10,11}$/;
   return phoneRegex.test(String(phone || '').replace(/\D/g, ''));
-}
-
-export function escapeHtml(str) {
-  return String(str || '')
-    .replaceAll('&','&amp;')
-    .replaceAll('<','&lt;')
-    .replaceAll('>','&gt;')
-    .replaceAll('"','&quot;')
-    .replaceAll("'",'&#39;');
 }
 
 export function formatPhoneNumber(phone) {
@@ -132,97 +188,32 @@ export function formatDDMMYYYY(v) {
   return s;
 }
 
-// Tab Management
-export function setActiveTab(tabId) {
-  // Hide all sections
-  document.querySelectorAll('.tab-content').forEach(tab => {
-    tab.style.display = 'none';
-    tab.classList.remove('active');
-  });
-  
-  // Show target section
-  const targetTab = document.getElementById(tabId + 'Tab');
-  if (targetTab) {
-    targetTab.style.display = 'block';
-    targetTab.classList.add('active');
-  }
-
-  // Update button styles
-  document.querySelectorAll('.tabs button').forEach(btn => {
-    btn.classList.remove('bg-blue-700', 'text-white');
-    btn.classList.add('bg-gray-200', 'text-gray-800', 'hover:bg-gray-300');
-  });
-  
-  // Find button by onclick attribute (handle both simple and complex matches)
-  const buttons = document.querySelectorAll('.tabs button');
-  buttons.forEach(btn => {
-    const onclickStr = btn.getAttribute('onclick') || '';
-    if (onclickStr.includes(`setActiveTab('${tabId}')`)) {
-      btn.classList.remove('bg-gray-200', 'text-gray-800', 'hover:bg-gray-300');
-      btn.classList.add('bg-blue-700', 'text-white');
-    }
-  });
-
-  // Trigger tab-specific loads
-  if (tabId === 'alert' && typeof window.loadInactiveStudents === 'function') {
-    window.loadInactiveStudents();
-  }
-  if (tabId === 'revenue' && typeof window.refreshDailyReport === 'function') {
-    window.refreshDailyReport();
-  }
+export function escapeHtml(str) {
+  return String(str || '')
+    .replaceAll('&','&amp;')
+    .replaceAll('<','&lt;')
+    .replaceAll('>','&gt;')
+    .replaceAll('"','&quot;')
+    .replaceAll("'",'&#39;');
 }
 
-export function copyText(elementId) {
-  const el = document.getElementById(elementId);
-  if (el && el.value && navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(el.value).then(() => {
-      el.classList.add('ring-2','ring-green-500');
-      setTimeout(() => { el.classList.remove('ring-2','ring-green-500'); }, 1200);
-    }).catch(()=>{});
-  }
-}
-
-export function pasteText(elementId) {
-  if (navigator.clipboard && navigator.clipboard.readText) {
-    navigator.clipboard.readText().then(t => {
-      const el = document.getElementById(elementId);
-      if (el) {
-        el.value = (t || '').trim();
-        el.classList.add('ring-2','ring-blue-500');
-        setTimeout(() => { el.classList.remove('ring-2','ring-blue-500'); }, 1200);
-        // Trigger change event for any listeners
-        el.dispatchEvent(new Event('input', { bubbles: true }));
-        el.dispatchEvent(new Event('change', { bubbles: true }));
-      }
-    }).catch(()=>{});
-  }
-}
-
-export function generatePTGroupId(tab = 'register') {
-  const packageSelect = document.getElementById(tab === 'renew' ? 'renewPackageCode' : 'packageCode');
-  const packageCode = packageSelect?.value || 'PKG';
-  const today = new Date();
-  const dd = String(today.getDate()).padStart(2, '0');
-  const mm = String(today.getMonth() + 1).padStart(2, '0');
-  const yyyy = today.getFullYear();
-  const dateStr = `${dd}${mm}${yyyy}`;
-  const rand = Math.random().toString(36).toUpperCase().replace(/[^A-Z0-9]/g, '').slice(-4);
-  
-  return `${packageCode}_${dateStr}_${rand}`;
-}
+// =================================================================
+// SEARCH & SUGGESTIONS
+// =================================================================
 
 export function handleSearchSuggestions(inputEl, tab) {
   const query = inputEl.value.trim().toLowerCase();
   const suggestionBox = document.getElementById(`${tab}SearchSuggestions`);
-  
+  if (!suggestionBox) return;
+
   if (query.length < 1) {
-    if (suggestionBox) suggestionBox.classList.add('hidden');
+    suggestionBox.classList.add('hidden');
     return;
   }
 
   const matches = (window.__allStudentsCache || []).filter(s => 
-    s.id.toLowerCase().includes(query) || 
-    s.name.toLowerCase().includes(query) || 
+    (s.id && s.id.toLowerCase().includes(query)) || 
+    (s.name && s.name.toLowerCase().includes(query)) || 
     (s.phone && s.phone.includes(query))
   ).slice(0, 15);
 
@@ -251,91 +242,59 @@ export function selectSearchSuggestion(id, tab) {
   if (inputEl) inputEl.value = id;
   if (suggestionBox) suggestionBox.classList.add('hidden');
   
-  // Auto trigger search
   if (tab === 'renew' && typeof window.searchStudentForRenew === 'function') window.searchStudentForRenew();
   if (tab === 'pending' && typeof window.searchStudentForPending === 'function') window.searchStudentForPending();
 }
 
-export function setupPaymentBlock(cfg) {
-  const statusEl = document.getElementById(cfg.statusId);
-  const methodEl = document.getElementById(cfg.methodId);
-  if (!statusEl || !methodEl) return;
+// =================================================================
+// PT GROUP & OTHERS
+// =================================================================
 
-  const splitEl = cfg.splitId ? document.getElementById(cfg.splitId) : null;
-  const cashEl = cfg.cashId ? document.getElementById(cfg.cashId) : null;
-  const transferEl = cfg.transferId ? document.getElementById(cfg.transferId) : null;
-  const hintEl = cfg.hintId ? document.getElementById(cfg.hintId) : null;
-
-  const getTotal = () => {
-    if (typeof cfg.getTotal === 'function') return cfg.getTotal();
-    return 0;
-  };
-
-  const parseVnd = (text) => Number(String(text || '').replace(/[^0-9]/g, '')) || 0;
-
-  const updateHint = () => {
-    const total = getTotal();
-    const paid = parseVnd(cashEl?.value) + parseVnd(transferEl?.value);
-    if (!hintEl) return;
-    
-    const debt = total - paid;
-    if (statusEl.value === 'Chưa thanh toán') {
-      hintEl.textContent = total > 0 ? `Còn nợ: ${window.formatMoney(total, true)}` : '';
-      hintEl.className = "text-[10px] font-bold text-red-500 mt-1";
-      return;
-    }
-    if (paid <= 0) {
-      hintEl.textContent = '';
-      return;
-    }
-    if (debt > 0) {
-      hintEl.textContent = `Còn nợ: ${window.formatMoney(debt, true)}`;
-      hintEl.className = "text-[10px] font-bold text-orange-500 mt-1";
-    } else if (debt < 0) {
-      hintEl.textContent = `Dư: ${window.formatMoney(-debt, true)}`;
-      hintEl.className = "text-[10px] font-bold text-blue-500 mt-1";
-    } else {
-      hintEl.textContent = 'Đã đủ';
-      hintEl.className = "text-[10px] font-bold text-green-500 mt-1";
-    }
-  };
-
-  const applyState = () => {
-    const status = statusEl.value;
-    if (status === 'Chưa thanh toán') {
-      methodEl.value = '';
-      methodEl.disabled = true;
-      if (splitEl) splitEl.classList.add('hidden');
-      updateHint();
-      return;
-    }
-    methodEl.disabled = false;
-    if (!methodEl.value) methodEl.value = 'Tiền mặt';
-    if (splitEl) {
-      const isSplit = methodEl.value === 'Tiền mặt + Chuyển khoản';
-      splitEl.classList.toggle('hidden', !isSplit);
-    }
-    updateHint();
-  };
-
-  statusEl.addEventListener('change', applyState);
-  methodEl.addEventListener('change', applyState);
-  if (cashEl) cashEl.addEventListener('input', updateHint);
-  if (transferEl) transferEl.addEventListener('input', updateHint);
-
-  // Expose updateHint to be called externally if total changes
-  cfg.onInit?.(updateHint);
-  applyState();
+export function generatePTGroupId(tab = 'register') {
+  const packageSelect = document.getElementById(tab === 'renew' ? 'renewPackageCode' : (tab === 'pending' ? 'pendingPackageCode' : 'packageCode'));
+  const packageCode = packageSelect?.value || 'PKG';
+  const today = new Date();
+  const dd = String(today.getDate()).padStart(2, '0');
+  const mm = String(today.getMonth() + 1).padStart(2, '0');
+  const yyyy = today.getFullYear();
+  const dateStr = `${dd}${mm}${yyyy}`;
+  const rand = Math.random().toString(36).toUpperCase().replace(/[^A-Z0-9]/g, '').slice(-4);
+  return `${packageCode}_${dateStr}_${rand}`;
 }
 
-// Global exposure for HTML onclick
+export function copyText(elementId) {
+  const el = document.getElementById(elementId);
+  if (el && el.value && navigator.clipboard) {
+    navigator.clipboard.writeText(el.value).then(() => {
+      showToast('Đã sao chép!', 'success');
+      el.classList.add('ring-2','ring-green-500');
+      setTimeout(() => el.classList.remove('ring-2','ring-green-500'), 1200);
+    }).catch(()=>{});
+  }
+}
+
+export function pasteText(elementId) {
+  if (navigator.clipboard && navigator.clipboard.readText) {
+    navigator.clipboard.readText().then(t => {
+      const el = document.getElementById(elementId);
+      if (el) {
+        el.value = (t || '').trim();
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+        el.dispatchEvent(new Event('change', { bubbles: true }));
+        showToast('Đã dán!', 'info');
+      }
+    }).catch(()=>{});
+  }
+}
+
+// Global exposure
 window.setActiveTab = setActiveTab;
+window.initStaffName = initStaffName;
 window.getStaffName = getStaffName;
 window.setButtonLoading = setButtonLoading;
-window.initStaffName = initStaffName;
-window.copyText = copyText;
-window.pasteText = pasteText;
+window.showToast = showToast;
 window.generatePTGroupId = generatePTGroupId;
 window.handleSearchSuggestions = handleSearchSuggestions;
 window.selectSearchSuggestion = selectSearchSuggestion;
-window.setupPaymentBlock = setupPaymentBlock;
+window.copyText = copyText;
+window.pasteText = pasteText;
