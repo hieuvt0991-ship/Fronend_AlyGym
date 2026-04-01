@@ -4,7 +4,7 @@
  */
 
 // Thay đổi URL này sau khi bạn deploy backend GAS mới
-export const API_BASE_URL = 'https://script.google.com/macros/s/AKfycbz9LO0s5-OcokR0kn6XyHfj4RJ0So3wPh7MJ8hFS3DsZLwQazZ5NW8he1BXxGQMrOm67w/exec';
+export const API_BASE_URL = 'https://script.google.com/macros/s/AKfycbw_0HbHqYZyb07ohx2dc9zGm0B3ygKB21k3fI74m_yOwzFgSN0CAvEliIVw6MER0qnjQA/exec';
 
 /**
  * Common fetch function for backend communication.
@@ -34,7 +34,7 @@ export async function callAPI(action, params = {}) {
  */
 
 // URL của Google Apps Script Web App (sau khi đã deploy)
-export const API_BASE_URL = 'https://script.google.com/macros/s/AKfycbw0Pdqnht0GoDYDlSO2e0NMclzdGDXpx9S-Yi8xOBqoubaH2qjG9aCTpcwGxgegnISdIA/exec';
+export const API_BASE_URL = 'https://script.google.com/macros/s/AKfycbw_0HbHqYZyb07ohx2dc9zGm0B3ygKB21k3fI74m_yOwzFgSN0CAvEliIVw6MER0qnjQA/exec';
 
 /**
  * Hàm gọi API chung cho toàn hệ thống
@@ -44,7 +44,7 @@ export const API_BASE_URL = 'https://script.google.com/macros/s/AKfycbw0Pdqnht0G
  */
 
 // Thay đổi URL này sau khi bạn deploy backend GAS mới
-export const API_BASE_URL = 'https://script.google.com/macros/s/AKfycbzf4Y-05h-qfNf38L9L9_1527-X_X_X/exec';
+export const API_BASE_URL = 'https://script.google.com/macros/s/AKfycbw_0HbHqYZyb07ohx2dc9zGm0B3ygKB21k3fI74m_yOwzFgSN0CAvEliIVw6MER0qnjQA/exec';
 
 /**
  * Common fetch function for backend communication.
