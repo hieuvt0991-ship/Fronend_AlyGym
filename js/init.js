@@ -4,7 +4,8 @@
  */
 
 import { apiRunner } from './api.js';
-import { setActiveTab, initStaffName, showToast, parseMoney, formatMoney } from './utils.js';
+import { setActiveTab, initStaffName, showToast } from './utils.js';
+import { parseMoney, formatMoney } from './money.js';
 import { refreshPtSinglePayEligibility } from './checkin.js';
 import { updatePackageOptions, updatePTOptions, togglePTFields } from './register.js';
 import { updateRenewPackageOptions, toggleRenewPTFields } from './renew.js';
