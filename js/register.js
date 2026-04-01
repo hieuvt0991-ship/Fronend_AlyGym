@@ -1,3 +1,8 @@
+import { 
+  showSuccess, showError, showLoading, getStaffName, setButtonLoading 
+} from './utils.js';
+// KHÔNG import validatePhone nữa vì đã có window.validatePhone
+
 /**
  * @file register.js
  * @description Logic for registering new students with full global exposure and API integration.
@@ -105,9 +110,10 @@ export function submitRegistrationForm() {
     return;
   }
   
-  if (!validatePhone(phone)) {
-    showToast('Số điện thoại không hợp lệ (10-11 chữ số)', 'error');
-    return;
+  if (!window.validatePhone(phone)) {
+  showError('registerNotification', 'Số điện thoại không hợp lệ (10-11 chữ số)');
+  return;
+}
   }
   
   const pkgSelect = document.getElementById('packageCode');
