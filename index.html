@@ -492,15 +492,46 @@
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div class="bg-gray-50 p-4 rounded-xl border space-y-3">
             <h3 class="font-black text-[10px] text-gray-400 uppercase tracking-widest mb-2">Ghi nhận dịch vụ</h3>
-            <div class="grid grid-cols-2 gap-3">
-              <div class="form-group"><label>Loại</label><select id="revType" class="form-control-compact font-bold bg-white"><option value="Bán nước">Bán nước</option><option value="Phí phòng">Phí phòng</option><option value="Buổi lẻ">Buổi lẻ</option><option value="Khác">Khác</option></select></div>
-              <div class="form-group"><label>Mô tả</label><input type="text" id="revDescription" class="form-control-compact font-bold" placeholder="Nước suối, khăn..."></div>
-              <div class="form-group"><label>Số lượng</label><input type="number" id="revQuantity" value="1" min="1" class="form-control-compact font-bold text-center"></div>
-              <div class="form-group"><label>Đơn giá</label><input type="text" id="revPrice" oninput="handleMoneyInput(this)" class="form-control-compact font-bold text-right" placeholder="0"></div>
-              <div class="form-group"><label>Thanh toán</label><select id="revPaymentStatus" class="form-control-compact font-bold bg-white"><option value="Đã thanh toán">Đã xong</option><option value="Chưa thanh toán">Nợ</option></select></div>
-              <div class="form-group"><label>Hình thức</label><select id="revPaymentMethod" class="form-control-compact font-bold bg-white"><option value="Tiền mặt">Tiền mặt</option><option value="Chuyển khoản">Chuyển khoản</option></select></div>
+            <div class="grid grid-cols-1 gap-3">
+              <div class="form-group">
+                <label>Nội dung *</label>
+                <input type="text" id="revContent" class="form-control-compact font-bold" placeholder="Nước suối, khăn, găng tay...">
+              </div>
+              <div class="grid grid-cols-2 gap-3">
+                <div class="form-group"><label>Số tiền *</label><input type="text" id="revAmount" oninput="handleMoneyInput(this); window.__updateRevPaymentStatusHint()" class="form-control-compact font-bold text-right" placeholder="0"></div>
+                <div class="form-group">
+                  <label>Trạng thái</label>
+                  <select id="revPaymentStatus" class="form-control-compact font-bold bg-white">
+                    <option value="Đã thanh toán">Đã thanh toán</option>
+                    <option value="Thanh toán một phần">Một phần</option>
+                    <option value="Chưa thanh toán">Chưa thanh toán</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label>Hình thức</label>
+                  <select id="revPaymentMethod" class="form-control-compact font-bold bg-white">
+                    <option value="Tiền mặt">Tiền mặt</option>
+                    <option value="Chuyển khoản">Chuyển khoản</option>
+                    <option value="Tiền mặt + Chuyển khoản">Cả hai</option>
+                  </select>
+                </div>
+                <div class="form-group"><label>Ghi chú</label><input type="text" id="revNotes" class="form-control-compact text-xs" placeholder="Ghi chú..."></div>
+              </div>
+
+              <!-- Split payment -->
+              <div id="revSplit" class="hidden grid grid-cols-2 gap-2 p-2 bg-white rounded-lg border border-dashed">
+                <div class="form-group">
+                  <label class="!text-[9px]">Tiền mặt</label>
+                  <input id="revCashPaid" type="text" oninput="handleMoneyInput(this)" class="form-control-compact !p-1.5 text-xs font-bold" placeholder="0">
+                </div>
+                <div class="form-group">
+                  <label class="!text-[9px]">Chuyển khoản</label>
+                  <input id="revTransferPaid" type="text" oninput="handleMoneyInput(this)" class="form-control-compact !p-1.5 text-xs font-bold" placeholder="0">
+                </div>
+              </div>
+              <div id="revDebtHint" class="text-[9px] font-bold text-red-600"></div>
             </div>
-            <button onclick="submitRevenue()" class="w-full py-3 bg-green-600 text-white rounded-lg font-black text-sm hover:bg-green-700 shadow-lg transition-all active:scale-95 uppercase">Lưu giao dịch</button>
+            <button id="revenueButton" onclick="submitRevenue()" class="w-full py-3 bg-green-600 text-white rounded-lg font-black text-sm hover:bg-green-700 shadow-lg transition-all active:scale-95 uppercase">Lưu giao dịch</button>
             <div id="revenueNotification"></div>
           </div>
           <div class="bg-blue-50 p-4 rounded-xl border border-blue-100 flex flex-col">
