@@ -4,10 +4,10 @@
  */
 
 import { apiRunner } from './api.js';
-import { setActiveTab, initStaffName, showToast } from './utils.js';
+import { setActiveTab, initStaffName, showToast, parseMoney, formatMoney } from './utils.js';
 import { refreshPtSinglePayEligibility } from './checkin.js';
 import { updatePackageOptions, updatePTOptions, togglePTFields } from './register.js';
-import { updateRenewPackageOptions } from './renew.js';
+import { updateRenewPackageOptions, toggleRenewPTFields } from './renew.js';
 import { updatePendingPackageOptions } from './pending.js';
 
 /**
@@ -56,43 +56,114 @@ export function refreshStudentCache() {
 /**
  * Thiết lập logic cho khối thanh toán (chia tiền mặt/chuyển khoản).
  */
-export function setupPaymentBlock({ statusId, methodId, splitId, cashId, transferId, hintId, getTotal }) {
-  const statusEl = document.getElementById(statusId);
-  const methodEl = document.getElementById(methodId);
-  const splitEl = document.getElementById(splitId);
-  const cashEl = document.getElementById(cashId);
-  const transferEl = document.getElementById(transferId);
+export function setupPaymentBlock(cfg) {
+  const statusEl = document.getElementById(cfg.statusId);
+  const methodEl = document.getElementById(cfg.methodId);
+  if (!statusEl || !methodEl) return;
 
-  const update = () => {
-    const status = statusEl?.value;
-    const method = methodEl?.value;
-    const isSplit = method === 'Tiền mặt + Chuyển khoản';
-    
-    if (splitEl) splitEl.classList.toggle('hidden', !isSplit);
-    
-    // Logic gợi ý công nợ (Debt Hint)
-    if (hintId && typeof getTotal === 'function') {
-      const hintEl = document.getElementById(hintId);
-      if (hintEl) {
-        if (status === 'Thanh toán một phần' || status === 'Chưa thanh toán') {
-          const total = getTotal();
-          const paid = isSplit ? (parseMoney(cashEl.value) + parseMoney(transferEl.value)) : 0;
-          const debt = Math.max(0, total - paid);
-          hintEl.innerHTML = `<i class="fas fa-exclamation-circle mr-1"></i> Ghi nợ: <span class="font-black text-red-600">${formatMoney(debt, true)}</span>`;
-          hintEl.classList.remove('hidden');
-        } else {
-          hintEl.classList.add('hidden');
-        }
-      }
-    }
+  const splitEl = cfg.splitId ? document.getElementById(cfg.splitId) : null;
+  const cashEl = cfg.cashId ? document.getElementById(cfg.cashId) : null;
+  const transferEl = cfg.transferId ? document.getElementById(cfg.transferId) : null;
+  const hintEl = cfg.hintId ? document.getElementById(cfg.hintId) : null;
+
+  const getTotal = () => {
+    if (typeof cfg.getTotal === 'function') return cfg.getTotal();
+    return 0;
   };
 
-  [statusEl, methodEl].forEach(el => el?.addEventListener('change', update));
-  [cashEl, transferEl].forEach(el => el?.addEventListener('input', update));
-  
+  const clearSplit = () => {
+    if (cashEl) cashEl.value = '';
+    if (transferEl) transferEl.value = '';
+  };
+
+  const updateHint = () => {
+    const total = getTotal();
+    const paid = parseMoney(cashEl ? cashEl.value : 0) + parseMoney(transferEl ? transferEl.value : 0);
+    if (!hintEl) return;
+    
+    const debt = total - paid;
+    if (statusEl.value === 'Chưa thanh toán') {
+      hintEl.innerHTML = total > 0 ? `Còn nợ: <span class="text-red-600 font-bold">${formatMoney(total, true)}</span>` : '';
+      return;
+    }
+    
+    if (paid <= 0) {
+      hintEl.textContent = '';
+      return;
+    }
+    
+    if (debt > 0) hintEl.innerHTML = `Còn nợ: <span class="text-red-600 font-bold">${formatMoney(debt, true)}</span>`;
+    else if (debt < 0) hintEl.innerHTML = `Dư: <span class="text-green-600 font-bold">${formatMoney(-debt, true)}</span>`;
+    else hintEl.innerHTML = '<span class="text-green-600 font-bold">Đã đủ</span>';
+  };
+
+  const applyState = () => {
+    const status = statusEl.value;
+    if (status === 'Chưa thanh toán') {
+      methodEl.value = '';
+      methodEl.disabled = true;
+      if (splitEl) splitEl.classList.add('hidden');
+      clearSplit();
+      updateHint();
+      return;
+    }
+    methodEl.disabled = false;
+    if (!methodEl.value) methodEl.value = 'Tiền mặt';
+    if (splitEl) {
+      splitEl.classList.toggle('hidden', methodEl.value !== 'Tiền mặt + Chuyển khoản');
+      if (methodEl.value !== 'Tiền mặt + Chuyển khoản') clearSplit();
+    }
+    updateHint();
+  };
+
+  statusEl.addEventListener('change', applyState);
+  methodEl.addEventListener('change', applyState);
+  if (cashEl) cashEl.addEventListener('input', updateHint);
+  if (transferEl) transferEl.addEventListener('input', updateHint);
+
   // Lưu hàm update vào window để gọi thủ công khi cần
-  const hintKey = `__update${statusId.charAt(0).toUpperCase() + statusId.slice(1)}Hint`;
-  window[hintKey] = update;
+  const hintKey = `__update${cfg.statusId.charAt(0).toUpperCase() + cfg.statusId.slice(1)}Hint`;
+  window[hintKey] = updateHint;
+
+  applyState();
+}
+
+/**
+ * Thiết lập xử lý radio button giảm giá
+ */
+function setupDiscountRadioButtons() {
+  const configs = [
+    { typeAmount: 'discountTypeAmount', typePercent: 'discountTypePercent', amount: 'discountAmount', percent: 'discountPercent', mode: 'register' },
+    { typeAmount: 'renewDiscountTypeAmount', typePercent: 'renewDiscountTypePercent', amount: 'renewDiscountAmount', percent: 'renewDiscountPercent', mode: 'renew' },
+    { typeAmount: 'pendingDiscountTypeAmount', typePercent: 'pendingDiscountTypePercent', amount: 'pendingDiscountAmount', percent: 'pendingDiscountPercent', mode: 'pending' }
+  ];
+
+  configs.forEach(cfg => {
+    const tAmount = document.getElementById(cfg.typeAmount);
+    const tPercent = document.getElementById(cfg.typePercent);
+    const vAmount = document.getElementById(cfg.amount);
+    const vPercent = document.getElementById(cfg.percent);
+
+    if (tAmount && tPercent) {
+      tAmount.addEventListener('change', () => {
+        if (tAmount.checked) {
+          if (vAmount) vAmount.disabled = false;
+          if (vPercent) { vPercent.disabled = true; vPercent.value = ''; }
+          if (typeof window.recalculateTotal === 'function') window.recalculateTotal(cfg.mode);
+        }
+      });
+      tPercent.addEventListener('change', () => {
+        if (tPercent.checked) {
+          if (vPercent) vPercent.disabled = false;
+          if (vAmount) { vAmount.disabled = true; vAmount.value = ''; }
+          if (typeof window.recalculateTotal === 'function') window.recalculateTotal(cfg.mode);
+        }
+      });
+    }
+    
+    if (vAmount) vAmount.addEventListener('input', () => window.recalculateTotal(cfg.mode));
+    if (vPercent) vPercent.addEventListener('input', () => window.recalculateTotal(cfg.mode));
+  });
 }
 
 // =================================================================
@@ -103,6 +174,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // 1. Cấu hình mặc định
   initStaffName();
   setActiveTab('checkIn');
+  setupDiscountRadioButtons();
 
   // 2. Thiết lập các khối thanh toán
   setupPaymentBlock({
@@ -152,13 +224,28 @@ document.addEventListener('DOMContentLoaded', () => {
     cashId: 'revUpdateCashPaid',
     transferId: 'revUpdateTransferPaid',
     hintId: 'revUpdateDebtHint',
-    getTotal: () => 0 // Update revenue doesn't have a dynamic total on UI
+    getTotal: () => 0 
+  });
+
+  setupPaymentBlock({
+    statusId: 'ptSinglePaymentStatus',
+    methodId: 'ptSinglePaymentMethod',
+    splitId: 'ptSinglePaymentSplit',
+    cashId: 'ptSingleCashPaid',
+    transferId: 'ptSingleTransferPaid',
+    hintId: 'ptSingleDebtHint',
+    getTotal: () => parseMoney(document.getElementById('ptSinglePrice')?.value || '0')
   });
 
   // 3. Sự kiện cho tab Điểm danh
   const trainingTypeSelect = document.getElementById('checkinTrainingType');
   if (trainingTypeSelect) {
-    trainingTypeSelect.addEventListener('change', refreshPtSinglePayEligibility);
+    trainingTypeSelect.addEventListener('change', () => {
+       const v = trainingTypeSelect.value || '';
+       const box = document.getElementById('ptSingleSessionBox');
+       if (box) box.classList.toggle('hidden', v !== 'PT');
+       refreshPtSinglePayEligibility();
+    });
   }
 
   const ptSingleChk = document.getElementById('ptPayPerSession');
@@ -175,3 +262,4 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Global exposure
 window.refreshStudentCache = refreshStudentCache;
+window.setupPaymentBlock = setupPaymentBlock;

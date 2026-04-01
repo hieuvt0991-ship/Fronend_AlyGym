@@ -7,26 +7,30 @@ import { callAPI } from './config.js';
 
 /**
  * apiRunner mimics the behavior of google.script.run.
- * Usage: apiRunner.withSuccessHandler(successCb).withFailureHandler(failCb).functionName(params)
+ * Cải tiến để hỗ trợ gọi nhiều API đồng thời mà không bị ghi đè handler.
  */
-export const apiRunner = {
-  _successHandler: (data) => console.log('API Success:', data),
-  _failureHandler: (error) => console.error('API Error:', error),
-  
+class ApiRunner {
+  constructor() {
+    this._successHandler = (data) => console.log('API Success:', data);
+    this._failureHandler = (error) => console.error('API Error:', error);
+  }
+
   withSuccessHandler(handler) {
-    this._successHandler = handler;
-    return this;
-  },
-  
+    const newRunner = new ApiRunner();
+    newRunner._successHandler = handler;
+    newRunner._failureHandler = this._failureHandler;
+    return newRunner;
+  }
+
   withFailureHandler(handler) {
-    this._failureHandler = handler;
-    return this;
-  },
+    const newRunner = new ApiRunner();
+    newRunner._successHandler = this._successHandler;
+    newRunner._failureHandler = handler;
+    return newRunner;
+  }
 
   /**
    * Internal proxy to execute the actual API call.
-   * @param {string} action - The action name matching the backend's ACTION_MAP.
-   * @param {any} params - The parameters for the action.
    */
   async __execute(action, params = {}) {
     try {
@@ -40,11 +44,13 @@ export const apiRunner = {
       }
     }
   }
-};
+}
+
+export const apiRunner = new ApiRunner();
 
 /**
  * List of available backend actions.
- * These are dynamically added as methods to apiRunner.
+ * These are dynamically added as methods to ApiRunner prototype.
  */
 const ACTIONS = [
   // Initial Data
@@ -81,10 +87,10 @@ const ACTIONS = [
   'markStudentAsContacted'
 ];
 
-// Dynamically create methods for each action
+// Dynamically create methods for each action on the prototype
 ACTIONS.forEach(action => {
-  apiRunner[action] = function(params) {
-    this.__execute(action, params);
+  ApiRunner.prototype[action] = function(params) {
+    return this.__execute(action, params);
   };
 });
 

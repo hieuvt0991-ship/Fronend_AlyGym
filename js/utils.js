@@ -9,8 +9,6 @@
 
 /**
  * Hiển thị thông báo Toast.
- * @param {string} message - Nội dung thông báo.
- * @param {string} type - Loại thông báo: 'success', 'error', 'info', 'warning'.
  */
 export function showToast(message, type = 'info') {
   const container = document.getElementById('toastContainer');
@@ -19,7 +17,6 @@ export function showToast(message, type = 'info') {
   const toast = document.createElement('div');
   toast.className = `toast toast-${type}`;
   
-  // Icon mapping
   const icons = {
     success: 'fa-check-circle',
     error: 'fa-times-circle',
@@ -39,7 +36,6 @@ export function showToast(message, type = 'info') {
 
   container.appendChild(toast);
 
-  // Tự động xóa sau 4 giây
   setTimeout(() => {
     if (toast.parentElement) {
       toast.style.animation = 'fadeOut 0.5s ease-out forwards';
@@ -48,9 +44,14 @@ export function showToast(message, type = 'info') {
   }, 4000);
 }
 
-// Global exposure for callAPI or other non-module scripts
+// Global exposure
 window.showErrorNotification = (msg) => showToast(msg, 'error');
 window.showSuccessNotification = (msg) => showToast(msg, 'success');
+window.generatePTGroupId = generatePTGroupId;
+window.setActiveTab = setActiveTab;
+window.selectSearchSuggestion = selectSearchSuggestion;
+window.handleSearchSuggestions = handleSearchSuggestions;
+window.copyText = copyText;
 
 // =================================================================
 // UI HELPERS (Loading, Tabs, Buttons)
@@ -87,7 +88,7 @@ export function showLoading(elementId, message = 'Đang tải...') {
 export function showSuccess(elementId, message) {
   const element = document.getElementById(elementId);
   if (element) {
-    element.innerHTML = `<div class="bg-green-100 text-green-800 p-4 rounded-xl border border-green-300 font-bold">✅ ${message}</div>`;
+    element.innerHTML = `<div class="bg-green-100 text-green-800 p-4 rounded-xl border border-green-300 font-bold">✅ Thành công ${message}</div>`;
   }
   showToast(message, 'success');
 }
@@ -101,26 +102,22 @@ export function showError(elementId, message) {
 }
 
 export function setActiveTab(tabId) {
-  // 1. Hide all tab contents
   document.querySelectorAll('.tab-content').forEach(tab => {
     tab.style.display = 'none';
     tab.classList.remove('active');
   });
   
-  // 2. Show the selected tab content
   const targetTab = document.getElementById(tabId + 'Tab');
   if (targetTab) {
     targetTab.style.display = 'block';
     targetTab.classList.add('active');
   }
 
-  // 3. Update navigation button styles
   document.querySelectorAll('.tabs button').forEach(btn => {
     btn.classList.remove('bg-blue-700', 'text-white', 'shadow-sm');
     btn.classList.add('bg-gray-200', 'text-gray-800', 'hover:bg-gray-300');
   });
   
-  // 4. Highlight the active button
   const buttons = document.querySelectorAll('.tabs button');
   buttons.forEach(btn => {
     const onclickStr = btn.getAttribute('onclick') || '';
@@ -130,7 +127,6 @@ export function setActiveTab(tabId) {
     }
   });
 
-  // 5. Trigger tab-specific initialization
   if (tabId === 'alert' && typeof window.loadInactiveStudents === 'function') {
     window.loadInactiveStudents();
   }
@@ -144,7 +140,26 @@ export function initStaffName() {
   if (!el) return;
   const stored = localStorage.getItem('aly_staff');
   if (stored) el.value = stored;
-  el.addEventListener('change', () => localStorage.setItem('aly_staff', el.value.trim()));
+  
+  const save = () => {
+    const v = el.value.trim();
+    localStorage.setItem('aly_staff', v);
+    syncStaffToForms(v);
+  };
+  el.addEventListener('change', save);
+  el.addEventListener('blur', save);
+  syncStaffToForms(el.value.trim());
+}
+
+function syncStaffToForms(name) {
+  const v = name || 'Lễ tân';
+  ['revStaff', 'revUpdateStaff'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+      const cur = el.value.trim();
+      if (!cur || cur === 'Lễ tân') el.value = v;
+    }
+  });
 }
 
 export function getStaffName() {
@@ -166,6 +181,15 @@ export function formatPhoneNumber(phone) {
   if (cleanPhone.length === 9) cleanPhone = '0' + cleanPhone;
   if (cleanPhone.startsWith('84') && cleanPhone.length === 11) cleanPhone = '0' + cleanPhone.substring(2);
   return cleanPhone;
+}
+
+export function toDateInputValue(date) {
+  if (!date || isNaN(new Date(date).getTime())) return '';
+  const d = new Date(date);
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }
 
 export function formatDDMMYYYY(v) {
@@ -252,21 +276,30 @@ export function selectSearchSuggestion(id, tab) {
 
 export function generatePTGroupId(tab = 'register') {
   const packageSelect = document.getElementById(tab === 'renew' ? 'renewPackageCode' : (tab === 'pending' ? 'pendingPackageCode' : 'packageCode'));
-  const packageCode = packageSelect?.value || 'PKG';
+  const packageCode = packageSelect?.value || '';
+  if (!packageCode) return '';
+
   const today = new Date();
-  const dd = String(today.getDate()).padStart(2, '0');
-  const mm = String(today.getMonth() + 1).padStart(2, '0');
   const yyyy = today.getFullYear();
-  const dateStr = `${dd}${mm}${yyyy}`;
-  const rand = Math.random().toString(36).toUpperCase().replace(/[^A-Z0-9]/g, '').slice(-4);
-  return `${packageCode}_${dateStr}_${rand}`;
+  const mm = String(today.getMonth() + 1).padStart(2, '0');
+  const dd = String(today.getDate()).padStart(2, '0');
+  const dateStr = `${yyyy}${mm}${dd}`;
+  const rand = Math.random().toString(36).slice(2, 6).toUpperCase();
+  
+  // Logic khớp với GAS: GRP + packageCode + _ + yyyyMMdd + _ + RAND
+  return `GRP${packageCode}_${dateStr}_${rand}`;
 }
 
 export function copyText(elementId) {
   const el = document.getElementById(elementId);
+  const btn = (typeof event !== 'undefined' && event && event.target) ? event.target : null;
   if (el && el.value && navigator.clipboard) {
     navigator.clipboard.writeText(el.value).then(() => {
       showToast('Đã sao chép!', 'success');
+      if (btn) {
+        btn.disabled = true;
+        setTimeout(() => { btn.disabled = false; }, 1200);
+      }
       el.classList.add('ring-2','ring-green-500');
       setTimeout(() => el.classList.remove('ring-2','ring-green-500'), 1200);
     }).catch(()=>{});
@@ -287,6 +320,58 @@ export function pasteText(elementId) {
   }
 }
 
+/**
+ * Tính ngày kết thúc dựa trên gói tập và ngày bắt đầu
+ */
+export function calculateEndDate(startDateStr, packageCode) {
+  if (!startDateStr || !packageCode) return null;
+  const start = new Date(startDateStr);
+  if (isNaN(start.getTime())) return null;
+
+  const pkg = (window.packages || []).find(p => p.code === packageCode);
+  if (!pkg) return null;
+
+  const months = pkg.months || 1;
+  const end = new Date(start);
+  end.setMonth(end.getMonth() + months);
+  end.setDate(end.getDate() - 1);
+  return end;
+}
+
+/**
+ * Kiểm tra và áp dụng khuyến mãi tại client
+ */
+export function getClientPromotionDetails(packageCode, originalPrice, trainingType) {
+  if (!window.currentPromotion || !window.currentPromotion.isActive || !window.currentPromotion.promotions) {
+    return { isEligible: false, originalPrice: originalPrice };
+  }
+
+  const promo = window.currentPromotion.promotions.find(p => {
+    if (p.packageCode !== packageCode) return false;
+    
+    const pType = String(p.type || '').toLowerCase();
+    const aType = String(trainingType || '').toLowerCase();
+    if (pType === aType) return true;
+    if (pType.includes('nonpt') && (aType.includes('nonpt') || aType === 'nonpt')) return true;
+    if (pType.includes('pt') && (aType.includes('pt') || aType.startsWith('pt'))) return true;
+    return false;
+  });
+
+  if (!promo) {
+    return { isEligible: false, originalPrice: originalPrice };
+  }
+
+  return {
+    isEligible: true,
+    message: promo.description,
+    originalPrice: originalPrice,
+    finalPrice: promo.discountedPrice || originalPrice,
+    description: promo.description,
+    startDate: promo.startDate,
+    endDate: promo.endDate
+  };
+}
+
 // Global exposure
 window.setActiveTab = setActiveTab;
 window.initStaffName = initStaffName;
@@ -298,3 +383,10 @@ window.handleSearchSuggestions = handleSearchSuggestions;
 window.selectSearchSuggestion = selectSearchSuggestion;
 window.copyText = copyText;
 window.pasteText = pasteText;
+window.toDateInputValue = toDateInputValue;
+window.calculateEndDate = calculateEndDate;
+window.getClientPromotionDetails = getClientPromotionDetails;
+window.formatDDMMYYYY = formatDDMMYYYY;
+window.escapeHtml = escapeHtml;
+window.validatePhone = validatePhone;
+window.formatPhoneNumber = formatPhoneNumber;

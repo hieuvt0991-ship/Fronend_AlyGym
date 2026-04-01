@@ -27,8 +27,8 @@ export function updatePackageOptions() {
   if (type === 'NonPT') {
     filteredPackages = pkgList.filter(p => p.type === 'Gym_NonPT');
   } else {
-    // Filter PT packages by subtype (1:1, 2:1, 3:1)
-    filteredPackages = pkgList.filter(p => p.type === 'Gym_PT' && String(p.code || '').startsWith(type + ':'));
+    // Lọc các gói PT theo subtype (1:1, 2:1, 3:1) - Khớp với logic cũ: mã bắt đầu bằng type
+    filteredPackages = pkgList.filter(p => p.type === 'Gym_PT' && String(p.code || '').startsWith(type));
   }
   
   filteredPackages.forEach(p => {
@@ -65,7 +65,29 @@ export function togglePTFields() {
   const ptRow = document.getElementById('ptRow');
   if (ptRow) ptRow.classList.toggle('hidden', !isPT);
   
+  const ptGroupField = document.getElementById('ptGroupField');
+  if (ptGroupField) {
+    ptGroupField.classList.toggle('hidden', trainingType !== 'PT2:1' && trainingType !== 'PT3:1');
+  }
+
+  const regMonthFields = document.getElementById('registerMonthCardFields');
+  if (regMonthFields) {
+    regMonthFields.classList.toggle('hidden', isPT);
+  }
+
   updatePackageOptions();
+}
+
+export function generatePTGroupIdRegister() {
+  const trainingType = document.getElementById('trainingType')?.value || '';
+  if (trainingType !== 'PT2:1' && trainingType !== 'PT3:1') return;
+  
+  const id = window.generatePTGroupId('register');
+  const input = document.getElementById('ptGroupId');
+  if (input) {
+    input.value = id;
+    input.readOnly = false;
+  }
 }
 
 /**
@@ -89,7 +111,12 @@ export function submitRegistrationForm() {
   }
   
   const pkgSelect = document.getElementById('packageCode');
-  const selectedPkg = pkgSelect.selectedOptions[0];
+  const selectedPkg = pkgSelect ? pkgSelect.selectedOptions[0] : null;
+
+  if (!selectedPkg || !packageCode) {
+    showToast('Vui lòng chọn gói tập hợp lệ!', 'warning');
+    return;
+  }
 
   const formData = {
     fullName,
@@ -148,14 +175,26 @@ export function submitRegistrationForm() {
 }
 
 /**
- * Cập nhật danh sách PT vào dropdown.
+ * Cập nhật danh sách PT vào tất cả các dropdown PT (Đăng ký & Gia hạn).
  */
 export function updatePTOptions() {
-  const select = document.getElementById('ptCode');
-  if (!select) return;
-  select.innerHTML = '<option value="">-- Chọn PT --</option>';
-  (window.ptList || []).forEach(pt => {
-    select.add(new Option(pt.name, pt.code));
+  const selects = ['ptCode', 'renewPtCode'];
+  const ptList = window.ptList || [];
+
+  selects.forEach(id => {
+    const select = document.getElementById(id);
+    if (!select) return;
+    
+    const currentValue = select.value;
+    select.innerHTML = '<option value="">-- Chọn PT --</option>';
+    
+    ptList.forEach(pt => {
+      select.add(new Option(pt.name, pt.code));
+    });
+    
+    if (currentValue && [...select.options].some(o => o.value === currentValue)) {
+      select.value = currentValue;
+    }
   });
 }
 
@@ -165,3 +204,4 @@ window.updateTotalPrice = updateTotalPrice;
 window.togglePTFields = togglePTFields;
 window.submitRegistrationForm = submitRegistrationForm;
 window.updatePTOptions = updatePTOptions;
+window.generatePTGroupIdRegister = generatePTGroupIdRegister;

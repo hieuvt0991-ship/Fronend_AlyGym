@@ -63,23 +63,37 @@ export function setTotalWithMonthCard(pkgPrice, mode = 'register') {
   let seg = 'chungCu';
   let el = null;
   let issueCard = false;
-  let updateHint = null;
+  let trainingType = 'NonPT';
   
   if (mode === 'renew') {
     seg = document.getElementById('renewMonthCardSegment')?.value || 'chungCu';
+    trainingType = document.getElementById('renewTrainingType')?.value || 'NonPT';
     el = document.getElementById('renewTotalPrice');
-    issueCard = document.getElementById('renewIssueMonthCard')?.checked;
-    updateHint = window.__updateRenewPaymentHint;
+    const issueCardCheck = document.getElementById('renewIssueMonthCard')?.checked;
+    const onlyCard = document.getElementById('renewMonthCardOnly')?.checked;
+    if (onlyCard) {
+      issueCard = true;
+    } else if (trainingType.startsWith('PT') && issueCardCheck) {
+      issueCard = true;
+    } else if (trainingType === 'NonPT') {
+      // Gym students usually get month card by default or via checkbox
+      issueCard = !document.getElementById('renewMonthCardFields').classList.contains('hidden');
+    }
   } else if (mode === 'pending') {
     seg = document.getElementById('pendingMonthCardSegment')?.value || 'chungCu';
     el = document.getElementById('pendingTotalPrice');
     issueCard = document.getElementById('pendingIssueMonthCard')?.checked;
-    updateHint = window.__updatePendingPaymentHint;
   } else {
     seg = document.getElementById('registerMonthCardSegment')?.value || 'chungCu';
+    trainingType = document.getElementById('trainingType')?.value || 'NonPT';
     el = document.getElementById('totalPrice');
-    issueCard = document.getElementById('registerIssueMonthCard')?.checked;
-    updateHint = window.__updateRegisterPaymentHint;
+    const issueCardCheck = document.getElementById('registerIssueMonthCard')?.checked;
+    if (trainingType.startsWith('PT')) {
+       // Original logic: if PT, issueCard is usually true or depends on UI
+       issueCard = true; 
+    } else {
+       issueCard = issueCardCheck;
+    }
   }
 
   const discountAmount = mode === 'renew'
@@ -99,7 +113,10 @@ export function setTotalWithMonthCard(pkgPrice, mode = 'register') {
   if (el) {
     el.value = formatMoney(total, true);
     el.dataset.basePrice = pkgPrice;
-    if (typeof updateHint === 'function') updateHint();
+    
+    // Trigger hint update if setupPaymentBlock hint exists
+    const hintKey = `__update${el.id.charAt(0).toUpperCase() + el.id.slice(1)}Hint`;
+    if (typeof window[hintKey] === 'function') window[hintKey]();
   }
 }
 
