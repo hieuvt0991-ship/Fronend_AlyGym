@@ -1,6 +1,6 @@
 /**
  * @file scanner.js
- * @description QR Scanner logic using html5-qrcode.
+ * @description QR Scanner logic
  */
 
 import { submitCheckInCaller } from './checkin.js';
@@ -29,7 +29,7 @@ export function startQRScan() {
 
       setTimeout(() => stopQRScan(), 1000);
     },
-    () => {} // ignore constant scan errors
+    () => {} // ignore scan errors
   ).catch(err => {
     console.error('Camera Error:', err);
     window.showToast('Lỗi camera: ' + (err.message || 'Không xác định'), 'error');

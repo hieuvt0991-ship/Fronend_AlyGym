@@ -1,15 +1,15 @@
 /**
  * @file utils.js
- * @description Shared utility functions for ALY GYM frontend.
+ * @description Shared utilities - SINGLE SOURCE OF TRUTH
  */
 
-// ==================== CORE UI HELPERS ====================
+// ==================== UI HELPERS ====================
 export function initStaffName() {
   const input = document.getElementById('staffName');
   if (!input) return;
   const saved = localStorage.getItem('alyStaffName');
   if (saved) input.value = saved;
-  input.addEventListener('input', (e) => localStorage.setItem('alyStaffName', e.target.value.trim()));
+  input.addEventListener('input', e => localStorage.setItem('alyStaffName', e.target.value.trim()));
 }
 
 export function getStaffName() {
@@ -44,7 +44,6 @@ export function showError(id, msg) {
   if (el) el.innerHTML = `<div class="bg-red-100 text-red-800 p-3 rounded border border-red-300">❌ ${msg}</div>`;
 }
 
-// ==================== TOAST ====================
 export function showToast(message, type = 'info') {
   const container = document.getElementById('toastContainer');
   if (!container) return;
@@ -52,16 +51,8 @@ export function showToast(message, type = 'info') {
   toast.className = `toast toast-${type}`;
   toast.innerHTML = `<span>${message}</span>`;
   container.appendChild(toast);
-  setTimeout(() => {
-    toast.style.animation = 'fadeOut 0.5s ease-out forwards';
-    setTimeout(() => toast.remove(), 500);
-  }, 3500);
+  setTimeout(() => { toast.style.animation = 'fadeOut 0.5s forwards'; setTimeout(() => toast.remove(), 500); }, 3500);
 }
-
-// ==================== TAB & PAYMENT ====================
-export function setActiveTab(tabName) { /* ... giữ nguyên code bạn đã có ... */ }
-
-export function setupPaymentBlock(cfg) { /* ... giữ nguyên code bạn đã có ... */ }
 
 // ==================== VALIDATION & FORMATTING ====================
 export function validatePhone(phone) {
@@ -86,11 +77,11 @@ export function generatePTGroupId(tab = 'register') {
   return `GRP${code}_${date}_${rand}`;
 }
 
-// ==================== GLOBAL EXPOSURE (QUAN TRỌNG) ====================
+// ==================== GLOBAL EXPOSURE (QUAN TRỌNG NHẤT) ====================
 export {
   showToast, setButtonLoading, showLoading, showSuccess, showError,
-  setActiveTab, initStaffName, getStaffName, setupPaymentBlock,
-  validatePhone, escapeHtml, formatPhoneNumber, generatePTGroupId
+  initStaffName, getStaffName, validatePhone, escapeHtml,
+  formatPhoneNumber, generatePTGroupId
 };
 
 // Expose ra window để HTML onclick hoạt động
@@ -99,10 +90,8 @@ window.setButtonLoading = setButtonLoading;
 window.showLoading = showLoading;
 window.showSuccess = showSuccess;
 window.showError = showError;
-window.setActiveTab = setActiveTab;
 window.initStaffName = initStaffName;
 window.getStaffName = getStaffName;
-window.setupPaymentBlock = setupPaymentBlock;
 window.validatePhone = validatePhone;
 window.escapeHtml = escapeHtml;
 window.formatPhoneNumber = formatPhoneNumber;

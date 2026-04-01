@@ -167,7 +167,7 @@ export function submitRegistrationForm() {
       showError('registerNotification', err.message || err);
     })
     .registerStudent(formData);
-}
+
 
 /**
  * Cập nhật danh sách PT vào tất cả các dropdown PT.
