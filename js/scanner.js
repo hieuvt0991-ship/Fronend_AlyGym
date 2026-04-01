@@ -3,55 +3,10 @@
  * @description QR Scanner logic using html5-qrcode.
  */
 
-import { handleManualCheckIn } from './checkin.js';
-import { showToast } from './utils.js';
-
-let html5QrCode = null;
-
-export function startQRScan() {
-  const reader = document.getElementById('reader');
-  if (!reader) return;
-
-  html5QrCode = new Html5Qrcode("reader");
-  const config = { fps: 10, qrbox: { width: 250, height: 250 } };
-
-  html5QrCode.start(
-    { facingMode: "environment" },
-    config,
-    (decodedText) => {
-      document.getElementById('result').innerText = `Quét thành công: ${decodedText}`;
-      document.getElementById('manualInput').value = decodedText;
-      stopQRScan();
-      handleManualCheckIn();
-    },
-    (errorMessage) => { /* Ignore constant errors */ }
-  ).catch(err => {
-    console.error("Camera error:", err);
-    showToast("Không thể mở Camera. Vui lòng kiểm tra quyền truy cập!", "error");
-  });
-}
-
-export function stopQRScan() {
-  if (html5QrCode) {
-    html5QrCode.stop().then(() => {
-      document.getElementById('reader').innerHTML = '';
-      html5QrCode = null;
-    }).catch(err => console.error(err));
-  }
-}
-
-window.startQRScan = startQRScan;
-window.stopQRScan = stopQRScan;/**
- * @file scanner.js
- * @description QR Code scanning logic using html5-qrcode.
- */
-
 import { submitCheckInCaller } from './checkin.js';
-import { showToast } from './utils.js';
 
-/**
- * Bắt đầu quét mã QR từ camera.
- */
+// KHÔNG import showToast nữa vì đã có global từ utils.js
+
 export function startQRScan() {
   if (window.qrScanner) return;
 
@@ -63,7 +18,6 @@ export function startQRScan() {
 
   const qrBoxSize = Math.min(window.innerWidth * 0.8, 300);
   
-  // Khởi tạo scanner (Html5Qrcode được nạp từ CDN trong index.html)
   window.qrScanner = new Html5Qrcode('reader');
   
   const config = { 
@@ -76,10 +30,8 @@ export function startQRScan() {
     { facingMode: 'environment' },
     config,
     (qrCodeMessage) => {
-      // 1. Validation cơ bản
       if (!qrCodeMessage || qrCodeMessage.length < 3) return;
       
-      // 2. Tránh xử lý trùng lặp khi đang chạy
       if (window.qrScanner.__processing) return;
       window.qrScanner.__processing = true;
       
@@ -88,19 +40,16 @@ export function startQRScan() {
         resultDiv.className = 'text-[10px] text-green-600 font-black uppercase';
       }
       
-      showToast(`Đã quét: ${qrCodeMessage}`, 'info');
+      window.showToast(`Đã quét: ${qrCodeMessage}`, 'info');   // ← Dùng window.showToast
 
-      // 3. Gọi hàm điểm danh
       submitCheckInCaller(qrCodeMessage, 'qr');
       
-      // 4. Tự động dừng sau khi quét thành công để tiết kiệm pin/CPU
-      // (Người dùng có thể bấm MỞ CAMERA lại nếu cần quét tiếp)
       setTimeout(() => {
         stopQRScan();
       }, 1000);
     },
     (error) => {
-      // Lỗi này xảy ra liên tục khi không tìm thấy mã trong khung hình, nên để trống
+      // Bỏ qua lỗi không tìm thấy mã (thường xuyên xảy ra)
     }
   ).catch(err => {
     console.error('Camera Error:', err);
@@ -108,14 +57,11 @@ export function startQRScan() {
       resultDiv.innerText = 'Không thể mở camera. Hãy kiểm tra quyền truy cập.';
       resultDiv.className = 'text-[10px] text-red-600 font-bold';
     }
-    showToast('Lỗi camera: ' + (err.message || 'Không xác định'), 'error');
+    window.showToast('Lỗi camera: ' + (err.message || 'Không xác định'), 'error');
     window.qrScanner = null;
   });
 }
 
-/**
- * Dừng quét và giải phóng camera.
- */
 export function stopQRScan() {
   if (!window.qrScanner) return;
 
@@ -133,6 +79,6 @@ export function stopQRScan() {
   });
 }
 
-// Global exposure cho các sự kiện onclick trong HTML
+// Global exposure cho HTML onclick
 window.startQRScan = startQRScan;
 window.stopQRScan = stopQRScan;
